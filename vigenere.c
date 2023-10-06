@@ -11,6 +11,8 @@
 #include "prov/num.h"
 #include "v_params.h"
 
+#include <ascon.h>
+
 /*********************************************************************
  *
  *  Errors
@@ -76,8 +78,8 @@ static OSSL_FUNC_provider_get_params_fn ascon_prov_get_params;
 static OSSL_FUNC_provider_get_reason_strings_fn ascon_prov_get_reason_strings;
 
 static OSSL_FUNC_cipher_newctx_fn ascon_newctx;
-static OSSL_FUNC_cipher_encrypt_init_fn ascon_encrypt_init;
-static OSSL_FUNC_cipher_decrypt_init_fn ascon_decrypt_init;
+static OSSL_FUNC_cipher_encrypt_init_fn akif_ascon_encrypt_init;
+static OSSL_FUNC_cipher_decrypt_init_fn akif_ascon_decrypt_init;
 static OSSL_FUNC_cipher_update_fn ascon_update;
 static OSSL_FUNC_cipher_final_fn ascon_final;
 static OSSL_FUNC_cipher_dupctx_fn ascon_dupctx;
