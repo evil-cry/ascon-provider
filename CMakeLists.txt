@@ -11,6 +11,8 @@ add_compile_definitions(AUTHOR="@levitte")
 enable_testing()
 
 add_subdirectory(libprov)
+add_subdirectory(LibAscon)
+
 include(libprov/cmake/provider.cmake)
 setup_provider_openssl()
 
@@ -25,6 +27,7 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/v_params.c
 
 set(vigenere_source vigenere.c v_params.c)
 build_provider(vigenere "${vigenere_source}" libprov)
+target_link_libraries(vigenere PRIVATE ascon128)
 
 # Testing
 get_property(_is_multiconfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
