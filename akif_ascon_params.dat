@@ -1,7 +1,7 @@
 # -*- perl -*-
 [
-    "vigenere_params_parse",
-    # Vigenere algo params
+    "akif_ascon_params_parse",
+    # AkifAscon128 algo params
     PARAM_blocksize       => "blocksize",
     PARAM_keylen          => "keylen",
     # Provider params

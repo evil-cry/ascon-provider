@@ -9,7 +9,7 @@
 
 #include "prov/err.h"
 #include "prov/num.h"
-#include "v_params.h"
+#include "akif_ascon_params.h"
 
 #include <ascon.h>
 
@@ -386,7 +386,7 @@ static int akif_ascon_get_params(OSSL_PARAM params[])
     int ok = 1;
 
     for (p = params; p->key != NULL; p++)
-        switch (vigenere_params_parse(p->key)) {
+        switch (akif_ascon_params_parse(p->key)) {
         case V_PARAM_blocksize:
             ok &= provnum_set_size_t(p, 1) >= 0;
             break;
@@ -419,7 +419,7 @@ static int akif_ascon_get_ctx_params(void *vctx, OSSL_PARAM params[])
         OSSL_PARAM *p;
 
         for (p = params; p->key != NULL; p++)
-            switch (vigenere_params_parse(p->key)) {
+            switch (akif_ascon_params_parse(p->key)) {
             case V_PARAM_keylen:
                 ok &= provnum_set_size_t(p, ctx->keyl) >= 0;
                 break;
@@ -457,7 +457,7 @@ static int akif_ascon_set_ctx_params(void *vctx, const OSSL_PARAM params[])
     }
 
     for (p = params; p->key != NULL; p++)
-        switch (vigenere_params_parse(p->key)) {
+        switch (akif_ascon_params_parse(p->key)) {
         case V_PARAM_keylen:
         {
             size_t keyl = 0;
@@ -483,7 +483,7 @@ static int akif_ascon_set_ctx_params(void *vctx, const OSSL_PARAM params[])
 
 typedef void (*funcptr_t)(void);
 
-/* The Vigenere dispatch table */
+/* The Akif-Ascon dispatch table */
 static const OSSL_DISPATCH akif_ascon_functions[] = {
     { OSSL_FUNC_CIPHER_NEWCTX, (funcptr_t)akif_ascon_newctx },
     { OSSL_FUNC_CIPHER_ENCRYPT_INIT, (funcptr_t)akif_t_ascon_encrypt_init },
@@ -503,7 +503,7 @@ static const OSSL_DISPATCH akif_ascon_functions[] = {
 
 /* The table of ciphers this provider offers */
 static const OSSL_ALGORITHM akif_ascon_ciphers[] = {
-    { "vigenere:1.3.6.1.4.1.5168.4711.22087.1", "x.author='" AUTHOR "'", 
+    { "akifascon128", "x.author='" AUTHOR "'",
     akif_ascon_functions },
     { NULL, NULL, NULL }
 };
@@ -532,7 +532,7 @@ static int akif_ascon_prov_get_params(void *provctx, OSSL_PARAM *params)
     int ok = 1;
 
     for(p = params; p->key != NULL; p++)
-        switch (vigenere_params_parse(p->key)) {
+        switch (akif_ascon_params_parse(p->key)) {
         case V_PARAM_version:
             *(const void **)p->data = VERSION;
             p->return_size = strlen(VERSION);

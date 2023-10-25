@@ -18,6 +18,9 @@ static const unsigned char key[] =
 static unsigned char ciphertext[sizeof(plaintext)];
 static unsigned char plaintext2[sizeof(plaintext)];
 
+#define PROVIDER_NAME "akif_ascon"
+#define CIPHER_NAME "akifascon128"
+
 int main()
 {
   OSSL_LIB_CTX *libctx = NULL;
@@ -28,10 +31,10 @@ int main()
   OSSL_PROVIDER *prov = NULL;
   int test = 0;
 
-  printf(cBLUE "Trying to load vigenere provider" cNORM "\n");
-  T((c = EVP_CIPHER_fetch(libctx, "vigenere", NULL)) == NULL);
-  T((prov = OSSL_PROVIDER_load(libctx, "vigenere")) != NULL);
-  T((c = EVP_CIPHER_fetch(libctx, "vigenere", NULL)) != NULL);
+  printf(cBLUE "Trying to load %s provider" cNORM "\n", PROVIDER_NAME);
+  T((c = EVP_CIPHER_fetch(libctx, CIPHER_NAME, NULL)) == NULL);
+  T((prov = OSSL_PROVIDER_load(libctx, PROVIDER_NAME)) != NULL);
+  T((c = EVP_CIPHER_fetch(libctx, CIPHER_NAME, NULL)) != NULL);
   T((ctx = EVP_CIPHER_CTX_new()) != NULL);
   EVP_CIPHER_free(c);         /* ctx holds on to the cipher */
   /* Test encryption */
