@@ -73,23 +73,23 @@ static struct provider_ctx_st *provider_ctx_new(const OSSL_CORE_HANDLE *core,
  * Forward declarations to ensure we get signatures right.  All the
  * OSSL_FUNC_* types come from <openssl/core_dispatch.h>
  */
-static OSSL_FUNC_provider_query_operation_fn ascon_prov_operation;
-static OSSL_FUNC_provider_get_params_fn ascon_prov_get_params;
-static OSSL_FUNC_provider_get_reason_strings_fn ascon_prov_get_reason_strings;
+static OSSL_FUNC_provider_query_operation_fn akif_ascon_prov_operation;
+static OSSL_FUNC_provider_get_params_fn akif_ascon_prov_get_params;
+static OSSL_FUNC_provider_get_reason_strings_fn akif_ascon_prov_get_reason_strings;
 
-static OSSL_FUNC_cipher_newctx_fn ascon_newctx;
-static OSSL_FUNC_cipher_encrypt_init_fn t_ascon_encrypt_init;
-static OSSL_FUNC_cipher_decrypt_init_fn t_ascon_decrypt_init;
-static OSSL_FUNC_cipher_update_fn ascon_update;
-static OSSL_FUNC_cipher_final_fn ascon_final;
-static OSSL_FUNC_cipher_dupctx_fn ascon_dupctx;
-static OSSL_FUNC_cipher_freectx_fn ascon_freectx;
-static OSSL_FUNC_cipher_get_params_fn ascon_get_params;
-static OSSL_FUNC_cipher_gettable_params_fn ascon_gettable_params;
-static OSSL_FUNC_cipher_set_ctx_params_fn ascon_set_ctx_params;
-static OSSL_FUNC_cipher_get_ctx_params_fn ascon_get_ctx_params;
-static OSSL_FUNC_cipher_settable_ctx_params_fn ascon_settable_ctx_params;
-static OSSL_FUNC_cipher_gettable_ctx_params_fn ascon_gettable_ctx_params;
+static OSSL_FUNC_cipher_newctx_fn akif_ascon_newctx;
+static OSSL_FUNC_cipher_encrypt_init_fn akif_t_ascon_encrypt_init;
+static OSSL_FUNC_cipher_decrypt_init_fn akif_t_ascon_decrypt_init;
+static OSSL_FUNC_cipher_update_fn akif_ascon_update;
+static OSSL_FUNC_cipher_final_fn akif_ascon_final;
+static OSSL_FUNC_cipher_dupctx_fn akif_ascon_dupctx;
+static OSSL_FUNC_cipher_freectx_fn akif_ascon_freectx;
+static OSSL_FUNC_cipher_get_params_fn akif_ascon_get_params;
+static OSSL_FUNC_cipher_gettable_params_fn akif_ascon_gettable_params;
+static OSSL_FUNC_cipher_set_ctx_params_fn akif_ascon_set_ctx_params;
+static OSSL_FUNC_cipher_get_ctx_params_fn akif_ascon_get_ctx_params;
+static OSSL_FUNC_cipher_settable_ctx_params_fn akif_ascon_settable_ctx_params;
+static OSSL_FUNC_cipher_gettable_ctx_params_fn akif_ascon_gettable_ctx_params;
 
 #define DEFAULT_KEYLENGTH 16    /* amount of bytes == 128 bits */
 #define BLOCKSIZE 1             /* amount of bytes */
@@ -119,7 +119,7 @@ typedef enum direction_et {
 /*
  * The context used throughout all these functions.
  */
-struct ascon_ctx_st {
+struct akif_ascon_ctx_st {
     
     struct provider_ctx_st *provctx;
     
@@ -128,11 +128,7 @@ struct ascon_ctx_st {
    //size_t keypos;              /* The current position in the key */
    
    
-    uint8_t ciphertext;
-    uint8_t ciphertext_len;
-    uint8_t plaintext;
-    uint8_t plaintext_len;
-
+   
     ascon_aead_ctx_t* const ctx;
     unsigned char* tag;
     size_t tag_len;
@@ -146,9 +142,9 @@ struct ascon_ctx_st {
 };
 #define ERR_HANDLE(ctx) ((ctx)->provctx->proverr_handle)
 
-static void *ascon_newctx(void *vprovctx)
+static void *akif_ascon_newctx(void *vprovctx)
 {
-    struct ascon_ctx_st *ctx = malloc(sizeof(*ctx));
+    struct akif_ascon_ctx_st *ctx = malloc(sizeof(*ctx));
 
     if (ctx != NULL) {
         memset(ctx, 0, sizeof(*ctx));
@@ -159,7 +155,7 @@ static void *ascon_newctx(void *vprovctx)
 }
 
 #if 0
-static void ascon_cleanctx(void *vctx)
+static void akif_ascon_cleanctx(void *vctx)
 {
     struct ascon_ctx_st *ctx = vctx;
 
@@ -173,10 +169,10 @@ static void ascon_cleanctx(void *vctx)
 }
 #endif
 
-static void *ascon_dupctx(void *vctx)
+static void *akif_ascon_dupctx(void *vctx)
 {
-    struct ascon_ctx_st *src = vctx;
-    struct ascon_ctx_st *dst = NULL;
+    struct akif_ascon_ctx_st *src = vctx;
+    struct akif_ascon_ctx_st *dst = NULL;
 
 #if 0
     if (src == NULL
@@ -189,7 +185,7 @@ static void *ascon_dupctx(void *vctx)
 
     if (src->key != NULL) {
         if ((dst->key = malloc(src->keyl)) == NULL) {
-            ascon_freectx(dst);
+            akif_ascon_freectx(dst);
             return NULL;
         }
         memcpy(dst->key, src->key, src->keyl);
@@ -206,22 +202,24 @@ static void *ascon_dupctx(void *vctx)
 #endif
 }
 
-static void ascon_freectx(void *vctx)
+static void akif_ascon_freectx(void *vctx)
 {
-    struct ascon_ctx_st *ctx = vctx;
+    struct akif_ascon_ctx_st *ctx = vctx;
 
     ctx->provctx = NULL;
     // TODO: call ascon_cleanctx(ctx);
     free(ctx);
 }
 
-static int ascon_internal_init(void *vctx,
+/* MY INTERNAL INIT FUNCTION (glue)*/
+
+static int akif_ascon_internal_init(void *vctx,
                               direction_t direction,
                               const unsigned char* key, size_t keylen,
                               const unsigned char *nonce, size_t noncelen,
                               const OSSL_PARAM params[])
 {
-    struct ascon_ctx_st *ctx = vctx;
+    struct akif_ascon_ctx_st *ctx = vctx;
 
     if (keylen != ASCON_AEAD128_KEY_LEN) {
         
@@ -264,55 +262,75 @@ static int ascon_internal_init(void *vctx,
     return 0;
 }}
 
+/* PROVIDER'S INIT FUNCTIONS */
 
-
-static int t_ascon_encrypt_init(void *vctx,
+static int akif_t_ascon_encrypt_init(void *vctx,
                               const unsigned char *key, size_t keylen,
                               const unsigned char *nonce, size_t noncelen,
                               const OSSL_PARAM params[])
 {
-    return ascon_internal_init(vctx, ENCRYPTION, key, keylen, nonce, noncelen, params);
+    return akif_ascon_internal_init(vctx, ENCRYPTION, key, keylen, nonce, noncelen, params);
 }
 
-static int t_ascon_decrypt_init(void *vctx,
+static int akif_t_ascon_decrypt_init(void *vctx,
                               const unsigned char *key, size_t keylen,
                               const unsigned char *nonce, size_t noncelen,
                               const OSSL_PARAM params[])
 {
-    return ascon_internal_init(vctx, DECRYPTION, key, keylen, nonce, noncelen, params);
+    /* calling  'internal init' based on the 'direction' */
+    return akif_ascon_internal_init(vctx, DECRYPTION, key, keylen, nonce, noncelen, params);
 }
 
 
+/* PROVIDER'S UPDATE FUNCTION*/
 
-static int ascon_update(void *vctx, unsigned char *out, size_t *outl,
+static int akif_ascon_update(void *vctx, unsigned char *out, size_t *outl,
                         size_t outsize, const unsigned char *in, size_t inl)
 {
 
-    struct ascon_ctx_st *ctx = vctx;
+    struct akif_ascon_ctx_st *ctx = vctx;
 
     if (ctx->direction == ENCRYPTION)
     {
-        //ascon_aead_ctx_t *temp = (ascon_aead_ctx_t*)ctx->internal_ctx; 
-        // TODO: call ascon_aead128_encrypt_update(...) and check its return value (we noticed it cannot fail), do we need to keep track of the returned number of bytes?;
-        return ascon_aead128_encrypt_update((ascon_aead_ctx_t*)ctx->internal_ctx, out, in, inl);
+        // check if outsize is big enough
+        const uint8_t *plaintext = in;
+        size_t plaintext_len = inl;
+        uint8_t *ciphertext = out;
+        size_t ciphertext_len;
+//ascon_aead_ctx_t *temp = (ascon_aead_ctx_t*)ctx->internal_ctx; 
+// TODO: call ascon_aead128_encrypt_update(...) and check its return value (we noticed it cannot fail), do we need to keep track of the returned number of bytes?;
+        ciphertext_len = ascon_aead128_encrypt_update((ascon_aead_ctx_t*)ctx->internal_ctx, ciphertext, plaintext, plaintext_len);
+        // check return
+        *outl = ciphertext_len;
+        return 1;
     }
 
     else if (ctx->direction == DECRYPTION)
 
     {
+        uint8_t *plaintext = out;
+        size_t plaintext_len;
+        const uint8_t *ciphertext = in;
+        size_t ciphertext_len = inl;
+
         // TODO: call ascon_aead128_decrypt_update(...) and check;
-        return ascon_aead128_decrypt_update((ascon_aead_ctx_t*)ctx->internal_ctx, in, out, *outl);
-    
+        plaintext_len = ascon_aead128_decrypt_update((ascon_aead_ctx_t*)ctx->internal_ctx, plaintext, ciphertext, ciphertext_len);
+        // check the return value
+        *outl = plaintext_len;
+        return 1;
         
     }
-    return 1;
+    return 0;
 }
 
-static int ascon_final(void *vctx,
-                       unsigned char *out, size_t *outl,
-                       size_t outsize, unsigned char tag)
-{
 
+/* PROVIDER'S FINAL FUNCTION*/
+
+
+static int akif_ascon_final(void *cctx, unsigned char *out, size_t *outl,
+                           size_t outsize)
+{
+#if 0
     struct ascon_ctx_st *ctx = vctx;
 
     if (ctx->direction == ENCRYPTION)
@@ -320,22 +338,38 @@ static int ascon_final(void *vctx,
     
 
         // TODO: call ascon_aead128_encrypt_final(...) and check the return value/output parameters;
-        ascon_aead128_encrypt_final((ascon_aead_ctx_t*)ctx->internal_ctx, out, outsize, tag);
+        ascon_aead128_encrypt_final((ascon_aead_ctx_t*)ctx->internal_ctx, out, tag, outsize);
         return 0;
     }
     else if(ctx->direction == DECRYPTION)
     {
+        size_t ret;
+        bool is_tag_valid = true;
+        //unsigned char *outl = (unsigned char *)malloc(sizeof(unsigned char));
+        if (outl != NULL){
+            *outl = is_tag_valid;
+            //free(outl);
+        }
+        else {
+            return 0;
+        }
+        // check if outsize is big enough
+        // check that internal_ctx and out are not NULL
         // TODO: call ascon_aead128_decrypt_final(...) and check;
-        //ascon_aead128_decrypt_final(vctx ,,);
+        ret = ascon_aead128_decrypt_final((ascon_aead_ctx_t*) ctx->internal_ctx ,out, &is_tag_valid,tag,outsize);
         return 0;
     }
     //ciphertext = 0;
-    ctx->ongoing = 0;
-    return 1;
+    //ctx->ongoing = 0;
+    }
+    #else
+    return 0; 
+#endif
 }
 
+
 /* Parameters that libcrypto can get from this implementation */
-static const OSSL_PARAM *ASCON_gettable_params(void *provctx)
+static const OSSL_PARAM *akif_ascon_gettable_params(void *provctx)
 {
     static const OSSL_PARAM table[] = {
         { "blocksize", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
@@ -346,7 +380,7 @@ static const OSSL_PARAM *ASCON_gettable_params(void *provctx)
     return table;
 }
 
-static int ascon_get_params(OSSL_PARAM params[])
+static int akif_ascon_get_params(OSSL_PARAM params[])
 {
     OSSL_PARAM *p;
     int ok = 1;
@@ -363,7 +397,7 @@ static int ascon_get_params(OSSL_PARAM params[])
     return ok;
 }
 
-static const OSSL_PARAM *ascon_gettable_ctx_params(void *cctx, void *provctx)
+static const OSSL_PARAM *akif_ascon_gettable_ctx_params(void *cctx, void *provctx)
 {
     static const OSSL_PARAM table[] = {
         { S_PARAM_keylen, OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
@@ -374,7 +408,7 @@ static const OSSL_PARAM *ascon_gettable_ctx_params(void *cctx, void *provctx)
 }
 
 
-static int ascon_get_ctx_params(void *vctx, OSSL_PARAM params[])
+static int akif_ascon_get_ctx_params(void *vctx, OSSL_PARAM params[])
 {
     struct ascon_ctx_st *ctx = vctx;
     int ok = 1;
@@ -399,7 +433,7 @@ static int ascon_get_ctx_params(void *vctx, OSSL_PARAM params[])
 }
 
 /* Parameters that libcrypto can send to this implementation */
-static const OSSL_PARAM *ascon_settable_ctx_params(void *cctx, void *provctx)
+static const OSSL_PARAM *akif_ascon_settable_ctx_params(void *cctx, void *provctx)
 {
     static const OSSL_PARAM table[] = {
         { S_PARAM_keylen, OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
@@ -409,16 +443,16 @@ static const OSSL_PARAM *ascon_settable_ctx_params(void *cctx, void *provctx)
     return table;
 }
 
-static int ascon_set_ctx_params(void *vctx, const OSSL_PARAM params[])
+static int akif_ascon_set_ctx_params(void *vctx, const OSSL_PARAM params[])
 {
-    struct ascon_ctx_st *ctx = vctx;
+    struct akif_ascon_ctx_st *ctx = vctx;
     const OSSL_PARAM *p;
     int ok = 1;
 
     // TODO: to be implemented properly
 #if 0
     if (ctx->ongoing) {
-        ERR_raise(ERR_HANDLE(ctx), ASCON_ONGOING_OPERATION);
+        ERR_raise(ERR_HANDLE(ctx), AKIF_ASCON_ONGOING_OPERATION);
         return 0;
     }
 
@@ -450,50 +484,49 @@ static int ascon_set_ctx_params(void *vctx, const OSSL_PARAM params[])
 typedef void (*funcptr_t)(void);
 
 /* The Vigenere dispatch table */
-static const OSSL_DISPATCH ascon_functions[] = {
-    { OSSL_FUNC_CIPHER_NEWCTX, (funcptr_t)ascon_newctx },
-    { OSSL_FUNC_CIPHER_ENCRYPT_INIT, (funcptr_t)t_ascon_encrypt_init },
-    { OSSL_FUNC_CIPHER_DECRYPT_INIT, (funcptr_t)t_ascon_decrypt_init },
-    { OSSL_FUNC_CIPHER_UPDATE, (funcptr_t)ascon_update },
-    { OSSL_FUNC_CIPHER_FINAL, (funcptr_t)ascon_final },
-    { OSSL_FUNC_CIPHER_DUPCTX, (funcptr_t)ascon_dupctx },
-    { OSSL_FUNC_CIPHER_FREECTX, (funcptr_t)ascon_freectx },
-    { OSSL_FUNC_CIPHER_GET_PARAMS, (funcptr_t)ascon_get_params },
-    { OSSL_FUNC_CIPHER_GETTABLE_PARAMS, (funcptr_t)ascon_gettable_params },
-    { OSSL_FUNC_CIPHER_GET_CTX_PARAMS, (funcptr_t)ascon_get_ctx_params },
-    { OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS,
-      (funcptr_t)ascon_gettable_ctx_params },
-    { OSSL_FUNC_CIPHER_SET_CTX_PARAMS, (funcptr_t)ascon_set_ctx_params },
-    { OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS,
-      (funcptr_t)ascon_settable_ctx_params },
+static const OSSL_DISPATCH akif_ascon_functions[] = {
+    { OSSL_FUNC_CIPHER_NEWCTX, (funcptr_t)akif_ascon_newctx },
+    { OSSL_FUNC_CIPHER_ENCRYPT_INIT, (funcptr_t)akif_t_ascon_encrypt_init },
+    { OSSL_FUNC_CIPHER_DECRYPT_INIT, (funcptr_t)akif_t_ascon_decrypt_init },
+    { OSSL_FUNC_CIPHER_UPDATE, (funcptr_t)akif_ascon_update },
+    { OSSL_FUNC_CIPHER_FINAL, (funcptr_t)akif_ascon_final },
+    { OSSL_FUNC_CIPHER_DUPCTX, (funcptr_t)akif_ascon_dupctx },
+    { OSSL_FUNC_CIPHER_FREECTX, (funcptr_t)akif_ascon_freectx },
+    { OSSL_FUNC_CIPHER_GET_PARAMS, (funcptr_t)akif_ascon_get_params },
+    { OSSL_FUNC_CIPHER_GETTABLE_PARAMS, (funcptr_t)akif_ascon_gettable_params },
+    { OSSL_FUNC_CIPHER_GET_CTX_PARAMS, (funcptr_t)akif_ascon_get_ctx_params },
+    { OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS,(funcptr_t)akif_ascon_gettable_ctx_params },
+    { OSSL_FUNC_CIPHER_SET_CTX_PARAMS, (funcptr_t)akif_ascon_set_ctx_params },
+    { OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS,(funcptr_t)akif_ascon_settable_ctx_params },
     { 0, NULL }
 };
 
 /* The table of ciphers this provider offers */
-static const OSSL_ALGORITHM ascon_ciphers[] = {
-    { "vigenere:1.3.6.1.4.1.5168.4711.22087.1", "x.author='" AUTHOR "'" , ascon_functions },
+static const OSSL_ALGORITHM akif_ascon_ciphers[] = {
+    { "vigenere:1.3.6.1.4.1.5168.4711.22087.1", "x.author='" AUTHOR "'", 
+    akif_ascon_functions },
     { NULL, NULL, NULL }
 };
 
 /* The function that returns the appropriate algorithm table per operation */
-static const OSSL_ALGORITHM *ascon_prov_operation(void *vprovctx,
+static const OSSL_ALGORITHM *akif_ascon_prov_operation(void *vprovctx,
                                                      int operation_id,
                                                      int *no_cache)
 {
     *no_cache = 0;
     switch (operation_id) {
     case OSSL_OP_CIPHER:
-        return ascon_ciphers;
+        return akif_ascon_ciphers;
     }
     return NULL;
 }
 
-static const OSSL_ITEM *ascon_prov_get_reason_strings(void *provctx)
+static const OSSL_ITEM *akif_ascon_prov_get_reason_strings(void *provctx)
 {
     return reason_strings;
 }
 
-static int ascon_prov_get_params(void *provctx, OSSL_PARAM *params)
+static int akif_ascon_prov_get_params(void *provctx, OSSL_PARAM *params)
 {
     OSSL_PARAM *p;
     int ok = 1;
@@ -513,7 +546,6 @@ static int ascon_prov_get_params(void *provctx, OSSL_PARAM *params)
         case V_PARAM_author:
             if (AUTHOR[0] != '\0') {
                 *(const void **)p->data = AUTHOR;
-static int ascon_final(void *vctx,
                 p->return_size = strlen(AUTHOR);
             }
             break;
@@ -522,19 +554,19 @@ static int ascon_final(void *vctx,
 }
 
 /* The function that tears down this provider */
-static void ascon_prov_teardown(void *vprovctx)
+static void akif_ascon_prov_teardown(void *vprovctx)
 {
     provider_ctx_free(vprovctx);
 }
 
 /* The base dispatch table */
 static const OSSL_DISPATCH provider_functions[] = {
-    { OSSL_FUNC_PROVIDER_TEARDOWN, (funcptr_t)ascon_prov_teardown },
-    { OSSL_FUNC_PROVIDER_QUERY_OPERATION, (funcptr_t)ascon_prov_operation },
+    { OSSL_FUNC_PROVIDER_TEARDOWN, (funcptr_t)akif_ascon_prov_teardown },
+    { OSSL_FUNC_PROVIDER_QUERY_OPERATION, (funcptr_t)akif_ascon_prov_operation },
     { OSSL_FUNC_PROVIDER_GET_REASON_STRINGS,
-      (funcptr_t)ascon_prov_get_reason_strings },
+      (funcptr_t)akif_ascon_prov_get_reason_strings },
     { OSSL_FUNC_PROVIDER_GET_PARAMS,
-      (funcptr_t)ascon_prov_get_params },
+      (funcptr_t)akif_ascon_prov_get_params },
     { 0, NULL }
 };
 
