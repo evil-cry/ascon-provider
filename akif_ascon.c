@@ -78,8 +78,8 @@ static OSSL_FUNC_provider_get_params_fn akif_ascon_prov_get_params;
 static OSSL_FUNC_provider_get_reason_strings_fn akif_ascon_prov_get_reason_strings;
 
 static OSSL_FUNC_cipher_newctx_fn akif_ascon_newctx;
-static OSSL_FUNC_cipher_encrypt_init_fn akif_t_ascon_encrypt_init;
-static OSSL_FUNC_cipher_decrypt_init_fn akif_t_ascon_decrypt_init;
+static OSSL_FUNC_cipher_encrypt_init_fn akif_ascon_encrypt_init;
+static OSSL_FUNC_cipher_decrypt_init_fn akif_ascon_decrypt_init;
 static OSSL_FUNC_cipher_update_fn akif_ascon_update;
 static OSSL_FUNC_cipher_final_fn akif_ascon_final;
 static OSSL_FUNC_cipher_dupctx_fn akif_ascon_dupctx;
@@ -264,7 +264,7 @@ static int akif_ascon_internal_init(void *vctx,
 
 /* PROVIDER'S INIT FUNCTIONS */
 
-static int akif_t_ascon_encrypt_init(void *vctx,
+static int akif_ascon_encrypt_init(void *vctx,
                               const unsigned char *key, size_t keylen,
                               const unsigned char *nonce, size_t noncelen,
                               const OSSL_PARAM params[])
@@ -272,7 +272,7 @@ static int akif_t_ascon_encrypt_init(void *vctx,
     return akif_ascon_internal_init(vctx, ENCRYPTION, key, keylen, nonce, noncelen, params);
 }
 
-static int akif_t_ascon_decrypt_init(void *vctx,
+static int akif_ascon_decrypt_init(void *vctx,
                               const unsigned char *key, size_t keylen,
                               const unsigned char *nonce, size_t noncelen,
                               const OSSL_PARAM params[])
@@ -486,8 +486,8 @@ typedef void (*funcptr_t)(void);
 /* The Akif-Ascon dispatch table */
 static const OSSL_DISPATCH akif_ascon_functions[] = {
     { OSSL_FUNC_CIPHER_NEWCTX, (funcptr_t)akif_ascon_newctx },
-    { OSSL_FUNC_CIPHER_ENCRYPT_INIT, (funcptr_t)akif_t_ascon_encrypt_init },
-    { OSSL_FUNC_CIPHER_DECRYPT_INIT, (funcptr_t)akif_t_ascon_decrypt_init },
+    { OSSL_FUNC_CIPHER_ENCRYPT_INIT, (funcptr_t)akif_ascon_encrypt_init },
+    { OSSL_FUNC_CIPHER_DECRYPT_INIT, (funcptr_t)akif_ascon_decrypt_init },
     { OSSL_FUNC_CIPHER_UPDATE, (funcptr_t)akif_ascon_update },
     { OSSL_FUNC_CIPHER_FINAL, (funcptr_t)akif_ascon_final },
     { OSSL_FUNC_CIPHER_DUPCTX, (funcptr_t)akif_ascon_dupctx },
