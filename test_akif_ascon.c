@@ -36,7 +36,7 @@ int main()
   T((prov = OSSL_PROVIDER_load(libctx, PROVIDER_NAME)) != NULL);
   T((c = EVP_CIPHER_fetch(libctx, CIPHER_NAME, NULL)) != NULL);
   T((ctx = EVP_CIPHER_CTX_new()) != NULL);
-  EVP_CIPHER_free(c);         /* ctx holds on to the cipher */
+  //EVP_CIPHER_free(c);         /* ctx holds on to the cipher */
   /* Test encryption */
   printf(cBLUE "Testing init without a key" cNORM "\n");
   T(EVP_CipherInit(ctx, c, NULL, NULL, 1));
@@ -44,7 +44,7 @@ int main()
          sizeof(key));
   T(EVP_CIPHER_CTX_set_key_length(ctx, sizeof(key)) > 0);
   printf(cBLUE "Testing encryption" cNORM "\n");
-  T(EVP_CipherInit(ctx, NULL, key, NULL, 1));
+  T(EVP_CipherInit(ctx, c, key, NULL, 1));
   T(EVP_CipherUpdate(ctx, ciphertext, &outl, plaintext, sizeof(plaintext)));
   T(EVP_CipherFinal(ctx, ciphertext + outl, &outlf));
   /* Test decryption */
