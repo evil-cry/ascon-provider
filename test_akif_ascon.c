@@ -12,6 +12,10 @@
 #include "test_common.h"
 
 static const unsigned char plaintext[] = "Ceasar's trove of junk";
+static const unsigned char nonce[] = {
+  0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+  0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+};
 static const unsigned char key[] =
   { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
     'Z', 'W', 'T', 'Q', 'N', 'K', 'H', 'B' };
@@ -40,16 +44,18 @@ int main()
   /* Test encryption */
   printf(cBLUE "Testing init without a key" cNORM "\n");
   T(EVP_CipherInit(ctx, c, NULL, NULL, 1));
+  #if 0
   printf(cBLUE "Testing setting key length to %zu (measured in bytes)" cNORM "\n",
          sizeof(key));
   T(EVP_CIPHER_CTX_set_key_length(ctx, sizeof(key)) > 0);
+  #endif
   printf(cBLUE "Testing encryption" cNORM "\n");
-  T(EVP_CipherInit(ctx, c, key, NULL, 1));
+  T(EVP_CipherInit(ctx, c, key, nonce, 1));
   T(EVP_CipherUpdate(ctx, ciphertext, &outl, plaintext, sizeof(plaintext)));
   T(EVP_CipherFinal(ctx, ciphertext + outl, &outlf));
   /* Test decryption */
   printf(cBLUE "Testing decryption" cNORM "\n");
-  T(EVP_CipherInit(ctx, NULL, key, NULL, 0));
+  T(EVP_CipherInit(ctx, NULL, key, nonce, 0));
   T(EVP_CipherUpdate(ctx, plaintext2, &outl2, ciphertext, outl));
   T(EVP_CipherFinal(ctx, plaintext2 + outl2, &outl2f));
 

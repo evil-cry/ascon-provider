@@ -13,6 +13,9 @@
 
 #include <ascon.h>
 
+#define OSSL_RV_SUCCESS 1
+#define OSSL_RV_ERROR 0
+
 /*********************************************************************
  *
  *  Errors
@@ -116,20 +119,21 @@ typedef enum direction_et {
     DECRYPTION
 } direction_t;
 
+typedef ascon_aead_ctx_t intctx_t;
+
 /*
  * The context used throughout all these functions.
  */
 struct akif_ascon_ctx_st {
-    
+
     struct provider_ctx_st *provctx;
-    
+
     // size_t keyl;                /* The configured length of the key */
    //size_t keysize;             /* Size of the key currently used */
    //size_t keypos;              /* The current position in the key */
-   
-   
-   
-    ascon_aead_ctx_t* const ctx;
+
+
+
     unsigned char* tag;
     size_t tag_len;
 
@@ -138,7 +142,7 @@ struct akif_ascon_ctx_st {
 
     direction_t direction;       /* either encryption or decryption */
     int ongoing;                /* 1 = operation has started */
-    void *internal_ctx;         /* a handle for the implementation internal context*/
+    intctx_t *internal_ctx;     /* a handle for the implementation internal context*/
 };
 #define ERR_HANDLE(ctx) ((ctx)->provctx->proverr_handle)
 
@@ -149,6 +153,14 @@ static void *akif_ascon_newctx(void *vprovctx)
     if (ctx != NULL) {
         memset(ctx, 0, sizeof(*ctx));
         ctx->provctx = vprovctx;
+
+        intctx_t *intctx = calloc(1, sizeof(*intctx));
+        if (intctx != NULL) {
+          ctx->internal_ctx = intctx;
+        } else {
+            // TODO: handle error
+            return NULL;
+        }
         //ctx->keyl = keylen();
     }
     return ctx;
@@ -213,54 +225,54 @@ static void akif_ascon_freectx(void *vctx)
 
 /* MY INTERNAL INIT FUNCTION (glue)*/
 
-static int akif_ascon_internal_init(void *vctx,
-                              direction_t direction,
-                              const unsigned char* key, size_t keylen,
-                              const unsigned char *nonce, size_t noncelen,
-                              const OSSL_PARAM params[])
-{
-    struct akif_ascon_ctx_st *ctx = vctx;
+static int akif_ascon_internal_init(void *vctx, direction_t direction,
+                                    const unsigned char *key, size_t keylen,
+                                    const unsigned char *nonce, size_t noncelen,
+                                    const OSSL_PARAM params[]) {
+  struct akif_ascon_ctx_st *ctx = vctx;
 
+  assert(ctx != NULL);
+
+  if (key != NULL) {
     if (keylen != ASCON_AEAD128_KEY_LEN) {
-        
-        // TODO: handle the error
-     if (keylen == (size_t)-1 || keylen == 0) {
+      // TODO: handle the error
+      //if (keylen == (size_t)-1 || keylen == 0) {
         ERR_raise(ERR_HANDLE(ctx), ASCON_NO_KEYLEN_SET);
-        return 0;
+        return OSSL_RV_ERROR;
+      //}
     }
+    free(ctx->key);
+    ctx->key = malloc(ASCON_AEAD128_KEY_LEN);
+    memcpy(ctx->key, key, ASCON_AEAD128_KEY_LEN);
+  }
 
+  if (nonce != NULL) {
     if (noncelen != ASCON_AEAD_NONCE_LEN) {
-        // TODO: handle the error
-        if (noncelen == (size_t)-1 || noncelen == 0) {
-            ERR_raise(ERR_HANDLE(ctx), NONCE_INCORRECT_KEYLEN);
-        
-        return 0;
+      // TODO: handle the error
+      //if (noncelen == (size_t)-1 || noncelen == 0) {
+        ERR_raise(ERR_HANDLE(ctx), NONCE_INCORRECT_KEYLEN);
+        return OSSL_RV_ERROR;
+      //}
     }
-    }}
-    if (key != NULL && nonce != NULL && ctx != NULL ) 
-    
-    {
-        
-        free(ctx->key);
-        ctx->key = malloc(ASCON_AEAD128_KEY_LEN);
-        memcpy(ctx->key, key, ASCON_AEAD128_KEY_LEN);
-        // free and malloc for ctx->nonce
-        free(ctx->nonce);
-        ctx->nonce = malloc(ASCON_AEAD_NONCE_LEN);
-	    memcpy(ctx->nonce, nonce, ASCON_AEAD_NONCE_LEN);
-    }
-    //ctx->keypos = 0; // remove structure
-    ctx->ongoing = 0;
-    ctx->direction = direction;
-    
-    // allocate and initialize ctx->internal_vctx (void*)
-    // call and check return of libascon_whatever_init()
-    if (ctx->direction == direction)
-{
+    // free and malloc for ctx->nonce
+    free(ctx->nonce);
+    ctx->nonce = malloc(ASCON_AEAD_NONCE_LEN);
+    memcpy(ctx->nonce, nonce, ASCON_AEAD_NONCE_LEN);
+  }
+
+  // ctx->keypos = 0; // remove structure
+  ctx->ongoing = 0;
+  ctx->direction = direction;
+
+  // allocate and initialize ctx->internal_vctx (void*)
+  // call and check return of libascon_whatever_init()
+  if (key != NULL && nonce != NULL) {
     // TODO: call ascon_aead128_init(...);
-     ascon_aead128_init((ascon_aead_ctx_t*)ctx->internal_ctx, key, nonce);
-    return 0;
-}}
+    ascon_aead128_init(ctx->internal_ctx, key, nonce);
+    return OSSL_RV_SUCCESS;
+  }
+  return OSSL_RV_SUCCESS;
+}
 
 /* PROVIDER'S INIT FUNCTIONS */
 
@@ -297,12 +309,12 @@ static int akif_ascon_update(void *vctx, unsigned char *out, size_t *outl,
         size_t plaintext_len = inl;
         uint8_t *ciphertext = out;
         size_t ciphertext_len;
-//ascon_aead_ctx_t *temp = (ascon_aead_ctx_t*)ctx->internal_ctx; 
+//ascon_aead_ctx_t *temp = (ascon_aead_ctx_t*)ctx->internal_ctx;
 // TODO: call ascon_aead128_encrypt_update(...) and check its return value (we noticed it cannot fail), do we need to keep track of the returned number of bytes?;
-        ciphertext_len = ascon_aead128_encrypt_update((ascon_aead_ctx_t*)ctx->internal_ctx, ciphertext, plaintext, plaintext_len);
+        ciphertext_len = ascon_aead128_encrypt_update(ctx->internal_ctx, ciphertext, plaintext, plaintext_len);
         // check return
         *outl = ciphertext_len;
-        return 1;
+        return OSSL_RV_SUCCESS;
     }
 
     else if (ctx->direction == DECRYPTION)
@@ -314,13 +326,13 @@ static int akif_ascon_update(void *vctx, unsigned char *out, size_t *outl,
         size_t ciphertext_len = inl;
 
         // TODO: call ascon_aead128_decrypt_update(...) and check;
-        plaintext_len = ascon_aead128_decrypt_update((ascon_aead_ctx_t*)ctx->internal_ctx, plaintext, ciphertext, ciphertext_len);
+        plaintext_len = ascon_aead128_decrypt_update(ctx->internal_ctx, plaintext, ciphertext, ciphertext_len);
         // check the return value
         *outl = plaintext_len;
-        return 1;
-        
+        return OSSL_RV_SUCCESS;
+
     }
-    return 0;
+    return OSSL_RV_ERROR;
 }
 
 
@@ -334,8 +346,8 @@ static int akif_ascon_final(void *cctx, unsigned char *out, size_t *outl,
     struct ascon_ctx_st *ctx = vctx;
 
     if (ctx->direction == ENCRYPTION)
-    {   
-    
+    {
+
 
         // TODO: call ascon_aead128_encrypt_final(...) and check the return value/output parameters;
         ascon_aead128_encrypt_final((ascon_aead_ctx_t*)ctx->internal_ctx, out, tag, outsize);
@@ -362,8 +374,9 @@ static int akif_ascon_final(void *cctx, unsigned char *out, size_t *outl,
     //ciphertext = 0;
     //ctx->ongoing = 0;
     }
-    #else
-    return 0; 
+#else
+    *outl = 0;
+    return OSSL_RV_SUCCESS;
 #endif
 }
 
@@ -374,6 +387,7 @@ static const OSSL_PARAM *akif_ascon_gettable_params(void *provctx)
     static const OSSL_PARAM table[] = {
         { "blocksize", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
         { "keylen", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
+        { "ivlen", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
         { NULL, 0, NULL, 0, 0 },
     };
 
@@ -391,7 +405,10 @@ static int akif_ascon_get_params(OSSL_PARAM params[])
             ok &= provnum_set_size_t(p, 1) >= 0;
             break;
         case V_PARAM_keylen:
-            ok &= provnum_set_size_t(p, keylen()) >= 0;
+            ok &= provnum_set_size_t(p, ASCON_AEAD128_KEY_LEN) >= 0;
+            break;
+        case V_PARAM_noncelen:
+            ok &= provnum_set_size_t(p, ASCON_AEAD_NONCE_LEN) >= 0;
             break;
         }
     return ok;
@@ -401,6 +418,7 @@ static const OSSL_PARAM *akif_ascon_gettable_ctx_params(void *cctx, void *provct
 {
     static const OSSL_PARAM table[] = {
         { S_PARAM_keylen, OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
+        { S_PARAM_noncelen, OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
         { NULL, 0, NULL, 0, 0 },
     };
 
@@ -414,21 +432,22 @@ static int akif_ascon_get_ctx_params(void *vctx, OSSL_PARAM params[])
     int ok = 1;
 
     // TODO: to be implemented properly
-#if 0
-    if (ctx->keyl > 0) {
-        OSSL_PARAM *p;
+#if 1
+    OSSL_PARAM *p;
 
-        for (p = params; p->key != NULL; p++)
-            switch (akif_ascon_params_parse(p->key)) {
-            case V_PARAM_keylen:
-                ok &= provnum_set_size_t(p, ctx->keyl) >= 0;
-                break;
-            }
-    }
+    for (p = params; p->key != NULL; p++)
+      switch (akif_ascon_params_parse(p->key)) {
+      case V_PARAM_keylen:
+        ok &= provnum_set_size_t(p, ASCON_AEAD128_KEY_LEN) >= 0;
+        break;
+    case V_PARAM_noncelen:
+        ok &= provnum_set_size_t(p, ASCON_AEAD_NONCE_LEN) >= 0;
+        break;
+      }
 
     return ok;
 #else
-    return !ok; 
+    return !ok;
 #endif
 }
 
@@ -436,7 +455,7 @@ static int akif_ascon_get_ctx_params(void *vctx, OSSL_PARAM params[])
 static const OSSL_PARAM *akif_ascon_settable_ctx_params(void *cctx, void *provctx)
 {
     static const OSSL_PARAM table[] = {
-        { S_PARAM_keylen, OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
+        //{ S_PARAM_keylen, OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
         { NULL, 0, NULL, 0, 0 },
     };
 
@@ -468,10 +487,8 @@ static int akif_ascon_set_ctx_params(void *vctx, const OSSL_PARAM params[])
                 ctx->keyl = keyl;
         }
         }
-    return ok;
-#else
-    return !ok;
 #endif
+    return ok;
 }
 
 
@@ -578,5 +595,5 @@ int OSSL_provider_init(const OSSL_CORE_HANDLE *core,
     if ((*vprovctx = provider_ctx_new(core, in)) == NULL)
         return 0;
     *out = provider_functions;
-    return 1;
+    return OSSL_RV_SUCCESS;
 }

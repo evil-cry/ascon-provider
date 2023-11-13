@@ -1,0 +1,6 @@
+[submodule "LibAscon"]
+	path = LibAscon
+	url = https://github.com/TheMatjaz/LibAscon.git
+[submodule "libprov"]
+	path = libprov
+	url = https://github.com/provider-corner/libprov.git

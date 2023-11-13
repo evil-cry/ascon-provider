@@ -4,6 +4,7 @@
     # AkifAscon128 algo params
     PARAM_blocksize       => "blocksize",
     PARAM_keylen          => "keylen",
+    PARAM_noncelen        => "ivlen",
     # Provider params
     PARAM_version         => "version",
     PARAM_buildinfo       => "buildinfo",
