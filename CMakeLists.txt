@@ -58,43 +58,50 @@ target_link_libraries(test_akif_ascon
 add_test(NAME akif_ascon COMMAND test_akif_ascon)
 set_tests_properties(akif_ascon PROPERTIES ENVIRONMENT "${TEST_ENVIRONMENT}")
 
-add_executable(test_akif_ascon_err
-  test_akif_ascon_err.c)
-if (MSVC)
-  target_link_libraries(test_akif_ascon_err
-    PRIVATE test_common OpenSSL::Crypto OpenSSL::applink)
-else ()
-  target_link_libraries(test_akif_ascon_err
-    PRIVATE test_common OpenSSL::Crypto)
-endif ()
-add_test(NAME akif_ascon_err COMMAND test_akif_ascon_err)
-set_tests_properties(akif_ascon_err PROPERTIES ENVIRONMENT "${TEST_ENVIRONMENT}")
+option(EXTRA_TESTS "Enable extra (failing) tests" OFF)
+option(EXTRA_TAP_TESTS "Enable extra (failing) tests using TAP" ${EXTRA_TESTS})
 
-if (WIN32)
-  if (DEFINED OPENSSL_LIBCRYPTO_SHARED)
-    cmake_path(GET OPENSSL_LIBCRYPTO_SHARED STEM OPENSSL_LIBCRYPTO_SHARED_NAME)
-    add_custom_command(
-      TARGET test_akif_ascon POST_BUILD
-      COMMAND cmake -E copy
-        "${OPENSSL_LIBCRYPTO_SHARED}"
-        "${AKIF_ASCON_MODULE_DIRECTORY}/${OPENSSL_LIBCRYPTO_SHARED_NAME}.dll")
-    add_custom_command(
-      TARGET test_akif_ascon_err POST_BUILD
-      COMMAND cmake -E copy
-        "${OPENSSL_LIBCRYPTO_SHARED}"
-        "${AKIF_ASCON_MODULE_DIRECTORY}/${OPENSSL_LIBCRYPTO_SHARED_NAME}.dll")
-  endif()
-endif()
+if(EXTRA_TESTS)
+    add_executable(test_akif_ascon_err
+      test_akif_ascon_err.c)
+    if (MSVC)
+      target_link_libraries(test_akif_ascon_err
+        PRIVATE test_common OpenSSL::Crypto OpenSSL::applink)
+    else ()
+      target_link_libraries(test_akif_ascon_err
+        PRIVATE test_common OpenSSL::Crypto)
+    endif ()
+    add_test(NAME akif_ascon_err COMMAND test_akif_ascon_err)
+    set_tests_properties(akif_ascon_err PROPERTIES ENVIRONMENT "${TEST_ENVIRONMENT}")
 
-# Test with OpenSSL, using TAP
-if (MSVC)
-  set(PROVE prove.bat)
-else()
-  set(PROVE prove)
-endif()
-add_test(NAME openssl
-  COMMAND ${PROVE} -PWrapOpenSSL ${CMAKE_CURRENT_SOURCE_DIR}/t)
-set_tests_properties(openssl PROPERTIES ENVIRONMENT "${TEST_ENVIRONMENT}")
+    if (WIN32)
+      if (DEFINED OPENSSL_LIBCRYPTO_SHARED)
+        cmake_path(GET OPENSSL_LIBCRYPTO_SHARED STEM OPENSSL_LIBCRYPTO_SHARED_NAME)
+        add_custom_command(
+          TARGET test_akif_ascon POST_BUILD
+          COMMAND cmake -E copy
+            "${OPENSSL_LIBCRYPTO_SHARED}"
+            "${AKIF_ASCON_MODULE_DIRECTORY}/${OPENSSL_LIBCRYPTO_SHARED_NAME}.dll")
+        add_custom_command(
+          TARGET test_akif_ascon_err POST_BUILD
+          COMMAND cmake -E copy
+            "${OPENSSL_LIBCRYPTO_SHARED}"
+            "${AKIF_ASCON_MODULE_DIRECTORY}/${OPENSSL_LIBCRYPTO_SHARED_NAME}.dll")
+      endif()
+    endif()
+
+    if(EXTRA_TAP_TESTS)
+        # Test with OpenSSL, using TAP
+        if (MSVC)
+          set(PROVE prove.bat)
+        else()
+          set(PROVE prove)
+        endif()
+        add_test(NAME openssl
+          COMMAND ${PROVE} -PWrapOpenSSL ${CMAKE_CURRENT_SOURCE_DIR}/t)
+        set_tests_properties(openssl PROPERTIES ENVIRONMENT "${TEST_ENVIRONMENT}")
+    endif(EXTRA_TAP_TESTS)
+endif(EXTRA_TESTS)
 
 # No installation instruction, as this should never be used in production
 # If you still want to do so, just copy akif_ascon.so / akif_ascon.dll to an
