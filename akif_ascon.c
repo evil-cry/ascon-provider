@@ -289,7 +289,17 @@ static int akif_ascon_update(void *vctx, unsigned char *out, size_t *outl,
                         size_t outsize, const unsigned char *in, size_t inl)
 {
 
-    struct akif_ascon_ctx_st *ctx = vctx;
+   struct akif_ascon_ctx_st *ctx = vctx;
+   
+   if (ctx == NULL) {
+    // TODO handle the error (err_raise whatever)
+    return OSSL_RV_ERROR;
+   }
+
+   if (ctx->is_ongoing == false) {
+    // TODO ahndle this error with another reason code (err_raise whatver2)
+     return OSSL_RV_ERROR;
+   }
 
     if (ctx->direction == ENCRYPTION)
     {
@@ -328,11 +338,20 @@ static int akif_ascon_update(void *vctx, unsigned char *out, size_t *outl,
 /* PROVIDER'S FINAL FUNCTION*/
 
 
-static int akif_ascon_final(void *cctx, unsigned char *out, size_t *outl,
-                           size_t outsize)
+static int akif_ascon_final(void *vctx, unsigned char *out, size_t *outl, size_t outsize)
 {
-#if 0
-    struct ascon_ctx_st *ctx = vctx;
+
+    struct akif_ascon_ctx_st *ctx = vctx;
+
+    if (ctx == NULL) {
+    // TODO handle the error (err_raise whatever)
+    return OSSL_RV_ERROR;
+   }
+
+   if (ctx->is_ongoing == false) {
+    // TODO ahndle this error with another reason code (err_raise whatver2)
+     return OSSL_RV_ERROR;
+   }
 
     if (ctx->direction == ENCRYPTION)
     {
