@@ -258,11 +258,8 @@ static int akif_ascon_internal_init(void *vctx, direction_t direction,
     {
         if (noncelen != ASCON_AEAD_NONCE_LEN)
         {
-            // TODO: handle the error
-            // if (noncelen == (size_t)-1 || noncelen == 0) {
             ERR_raise(ERR_HANDLE(ctx), ASCON_NONCE_INCORRECT_LEN);
             return OSSL_RV_ERROR;
-            //}
         }
     }
 
@@ -398,7 +395,6 @@ static int akif_ascon_final(void *vctx, unsigned char *out, size_t *outl, size_t
         }
         else
         {
-            // TODO: raise a specific error to say "tag was not set yet"
             ERR_raise(ERR_HANDLE(ctx), ASCON_NO_TAG_SET);
             return OSSL_RV_ERROR;
         }
