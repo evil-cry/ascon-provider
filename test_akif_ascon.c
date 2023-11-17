@@ -52,8 +52,6 @@ int set_tag_helper(EVP_CIPHER_CTX *ctx, const uint8_t *in, size_t inl)
   return 0;
 }
 
-
-
 int main()
 {
   OSSL_LIB_CTX *libctx = NULL;
@@ -64,9 +62,9 @@ int main()
   OSSL_PROVIDER *prov = NULL;
   int test = 0;
 
-  uint8_t computed_tag[FIXED_TAG_LENGTH]={0};
+  uint8_t computed_tag[FIXED_TAG_LENGTH] = {0};
   size_t computed_tag_len = FIXED_TAG_LENGTH;
-  uint8_t expected_tag[FIXED_TAG_LENGTH]={0};
+  uint8_t expected_tag[FIXED_TAG_LENGTH] = {0};
   size_t expected_tag_len = FIXED_TAG_LENGTH;
 
   printf(cBLUE "Trying to load %s provider" cNORM "\n", PROVIDER_NAME);
@@ -79,20 +77,25 @@ int main()
   /* Test encryption */
   printf(cBLUE "Testing init without a key" cNORM "\n");
   T(EVP_CipherInit(ctx, c, NULL, NULL, 1));
-  #if 0
+#if 0
   printf(cBLUE "Testing setting key length to %zu (measured in bytes)" cNORM "\n",
          sizeof(key));
   T(EVP_CIPHER_CTX_set_key_length(ctx, sizeof(key)) > 0);
-  #endif
+#endif
   printf(cBLUE "Testing encryption" cNORM "\n");
   T(EVP_CipherInit(ctx, c, key, nonce, 1));
   T(EVP_CipherUpdate(ctx, ciphertext, &outl, plaintext, sizeof(plaintext)));
   T(EVP_CipherFinal(ctx, ciphertext + outl, &outlf));
   T(get_tag_helper(ctx, computed_tag, &computed_tag_len, computed_tag_len));
+
   /* Test decryption */
   printf(cBLUE "Testing decryption" cNORM "\n");
   T(EVP_CipherInit(ctx, NULL, key, nonce, 0));
   T(EVP_CipherUpdate(ctx, plaintext2, &outl2, ciphertext, outl));
+
+  memcpy(expected_tag, computed_tag, FIXED_TAG_LENGTH);
+  expected_tag_len = FIXED_TAG_LENGTH;
+
   T(set_tag_helper(ctx, expected_tag, expected_tag_len));
   T(EVP_CipherFinal(ctx, plaintext2 + outl2, &outl2f));
 
