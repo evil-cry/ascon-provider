@@ -11,17 +11,30 @@
 
 #include "test_common.h"
 
-
 #define FIXED_TAG_LENGTH 16
 
 static const unsigned char plaintext[] = "Ceasar's trove of junk";
 static const unsigned char nonce[] = {
-  0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-  0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+    0x01,
+    0x02,
+    0x03,
+    0x04,
+    0x05,
+    0x06,
+    0x07,
+    0x08,
+    0x01,
+    0x02,
+    0x03,
+    0x04,
+    0x05,
+    0x06,
+    0x07,
+    0x08,
 };
 static const unsigned char key[] =
-  { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-    'Z', 'W', 'T', 'Q', 'N', 'K', 'H', 'B' };
+    {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+     'Z', 'W', 'T', 'Q', 'N', 'K', 'H', 'B'};
 static unsigned char ciphertext[sizeof(plaintext)];
 static unsigned char plaintext2[sizeof(plaintext)];
 
@@ -73,7 +86,7 @@ int main()
   T((prov = OSSL_PROVIDER_load(libctx, PROVIDER_NAME)) != NULL);
   T((c = EVP_CIPHER_fetch(libctx, CIPHER_NAME, NULL)) != NULL);
   T((ctx = EVP_CIPHER_CTX_new()) != NULL);
-  //EVP_CIPHER_free(c);         /* ctx holds on to the cipher */
+  // EVP_CIPHER_free(c);         /* ctx holds on to the cipher */
   /* Test encryption */
   printf(cBLUE "Testing init without a key" cNORM "\n");
   T(EVP_CipherInit(ctx, c, NULL, NULL, 1));
@@ -111,8 +124,7 @@ int main()
   EVP_CIPHER_CTX_free(ctx);
   OSSL_PROVIDER_unload(prov);
 
-  TEST_ASSERT(sizeof(plaintext) == outl2 + outl2f
-              && memcmp(plaintext, plaintext2, sizeof(plaintext)) == 0);
+  TEST_ASSERT(sizeof(plaintext) == outl2 + outl2f && memcmp(plaintext, plaintext2, sizeof(plaintext)) == 0);
 
   /* Exit code 0 == success */
   return !test;
