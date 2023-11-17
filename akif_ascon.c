@@ -389,9 +389,16 @@ static int akif_ascon_final(void *vctx, unsigned char *out, size_t *outl, size_t
             size_t expected_tag_len = FIXED_TAG_LENGTH;
 
             ret = ascon_aead128_decrypt_final((ascon_aead_ctx_t *)ctx->internal_ctx, plaintext, &is_tag_valid, expected_tag, expected_tag_len);
-            *plaintext = ret;
 
-            return OSSL_RV_SUCCESS;
+            if (is_tag_valid)
+            {
+                *outl = ret;
+                return OSSL_RV_SUCCESS;
+            }
+            else
+            {
+                return OSSL_RV_ERROR;
+            }
         }
         else
         {
