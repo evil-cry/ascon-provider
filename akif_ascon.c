@@ -16,6 +16,8 @@
 #define OSSL_RV_SUCCESS 1
 #define OSSL_RV_ERROR 0
 
+#define FIXED_TAG_LENGTH ASCON_AEAD_TAG_MIN_SECURE_LEN
+
 /*********************************************************************
  *
  *  Errors
