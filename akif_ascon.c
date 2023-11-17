@@ -366,29 +366,29 @@ static int akif_ascon_final(void *vctx, unsigned char *out, size_t *outl, size_t
     }
     else if(ctx->direction == DECRYPTION)
     {
+
+        uint8_t *plaintext = out;
+        bool is_tag_valid = false;
         size_t ret;
-        bool is_tag_valid = true;
-        //unsigned char *outl = (unsigned char *)malloc(sizeof(unsigned char));
-        if (outl != NULL){
-            *outl = is_tag_valid;
-            //free(outl);
+       
+        if (ctx->is_tag_set) {
+            const uint8_t *expected_tag = ctx->tag;
+            size_t expected_tag_len = FIXED_TAG_LENGTH;
+        
+        
+            ret = ascon_aead128_decrypt_final((ascon_aead_ctx_t*) ctx->internal_ctx ,plaintext, &is_tag_valid, expected_tag, expected_tag_len);
+            *plaintext=ret;
+
+            return OSSL_RV_SUCCESS;
+        } else {
+            // TODO: raise a specific error to say "tag was not set yet"
+            return OSSL_RV_ERROR;
         }
-        else {
-            return 0;
-        }
-        // check if outsize is big enough
-        // check that internal_ctx and out are not NULL
-        // TODO: call ascon_aead128_decrypt_final(...) and check;
-        ret = ascon_aead128_decrypt_final((ascon_aead_ctx_t*) ctx->internal_ctx ,out, &is_tag_valid,tag,outsize);
-        return 0;
+        
     }
-    //ciphertext = 0;
-    //ctx->ongoing = 0;
-    }
-#else
+
     *outl = 0;
     return OSSL_RV_SUCCESS;
-#endif
 }
 
 
