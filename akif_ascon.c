@@ -210,8 +210,12 @@ static void akif_ascon_freectx(void *vctx)
 {
     struct akif_ascon_ctx_st *ctx = vctx;
 
+    if (ctx == NULL)
+        return;
+
     ctx->provctx = NULL;
-    // TODO: call ascon_cleanctx(ctx);
+    akif_ascon_cleanctx(ctx);
+    free(ctx->internal_ctx);
     free(ctx);
 }
 
