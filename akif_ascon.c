@@ -353,11 +353,16 @@ static int akif_ascon_final(void *vctx, unsigned char *out, size_t *outl, size_t
 
     if (ctx->direction == ENCRYPTION)
     {
+        uint8_t *ciphertext = out;
+        uint8_t *tag=ctx->tag;
+        size_t tag_len= FIXED_TAG_LENGTH;
+        size_t ret;
 
+        ret= ascon_aead128_encrypt_final((ascon_aead_ctx_t*)ctx->internal_ctx, ciphertext,tag,tag_len);
+        *outl=ret;
+        ctx->is_tag_set = true;
 
-        // TODO: call ascon_aead128_encrypt_final(...) and check the return value/output parameters;
-        ascon_aead128_encrypt_final((ascon_aead_ctx_t*)ctx->internal_ctx, out, tag, outsize);
-        return 0;
+        return OSSL_RV_SUCCESS;
     }
     else if(ctx->direction == DECRYPTION)
     {
