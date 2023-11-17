@@ -8,6 +8,7 @@
 #include <openssl/evp.h>
 #include <openssl/core.h>
 #include <openssl/provider.h>
+#include <openssl/core_names.h>
 
 #include "test_common.h"
 
@@ -35,6 +36,7 @@ static const unsigned char nonce[] = {
 static const unsigned char key[] =
     {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
      'Z', 'W', 'T', 'Q', 'N', 'K', 'H', 'B'};
+
 static unsigned char ciphertext[sizeof(plaintext)];
 static unsigned char plaintext2[sizeof(plaintext)];
 
@@ -48,10 +50,23 @@ static unsigned char plaintext2[sizeof(plaintext)];
 // RETURN
 // - 1 if success
 // - 0 otherwise
-int get_tag_helper(const EVP_CIPHER_CTX *ctx, uint8_t *out, size_t *outl, size_t outsize)
+int get_tag_helper(EVP_CIPHER_CTX *ctx, uint8_t *out, size_t *outl, size_t outsize)
 {
+  size_t actually_written = 0;
+  OSSL_PARAM params[2] = {OSSL_PARAM_END, OSSL_PARAM_END};
+  params[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG,
+                                                out, outsize);
+  T(EVP_CIPHER_CTX_get_params(ctx, params));
+  actually_written = params[0].return_size;
+  T(actually_written == outsize);
 
-  return 0;
+  /* Output tag */
+  printf("Tag:\n");
+  BIO_dump_fp(stdout, out, actually_written);
+
+  *outl = actually_written;
+
+  return 1;
 }
 
 // sets the expected tag inside ctx.

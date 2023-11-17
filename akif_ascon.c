@@ -448,6 +448,7 @@ static const OSSL_PARAM *akif_ascon_gettable_ctx_params(void *cctx, void *provct
     static const OSSL_PARAM table[] = {
         {S_PARAM_keylen, OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0},
         {S_PARAM_noncelen, OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0},
+        {S_PARAM_tag, OSSL_PARAM_OCTET_STRING, NULL, FIXED_TAG_LENGTH, 0},
         {NULL, 0, NULL, 0, 0},
     };
 
@@ -456,7 +457,7 @@ static const OSSL_PARAM *akif_ascon_gettable_ctx_params(void *cctx, void *provct
 
 static int akif_ascon_get_ctx_params(void *vctx, OSSL_PARAM params[])
 {
-    struct ascon_ctx_st *ctx = vctx;
+    struct akif_ascon_ctx_st *ctx = vctx;
     int ok = 1;
 
     // TODO: to be implemented properly
@@ -471,6 +472,19 @@ static int akif_ascon_get_ctx_params(void *vctx, OSSL_PARAM params[])
             break;
         case V_PARAM_noncelen:
             ok &= provnum_set_size_t(p, ASCON_AEAD_NONCE_LEN) >= 0;
+            break;
+        case V_PARAM_tag:
+            // TODO: check if p->data_type matches "octect string"
+            // TODO: check that p->data (the given buffer) is not NULL
+            // TODO: check if the given bugger is big enough (p->data_size is big enough?)
+
+            // TODO: check if ctx->is_tag_set is true
+
+            memcpy(p->data, ctx->tag, FIXED_TAG_LENGTH);
+            // TODO: should we check the return of memcpy?
+
+            p->return_size = FIXED_TAG_LENGTH;
+            ok &= 1;
             break;
         }
 

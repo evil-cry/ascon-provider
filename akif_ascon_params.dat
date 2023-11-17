@@ -5,6 +5,7 @@
     PARAM_blocksize       => "blocksize",
     PARAM_keylen          => "keylen",
     PARAM_noncelen        => "ivlen",
+    PARAM_tag             => "tag",
     # Provider params
     PARAM_version         => "version",
     PARAM_buildinfo       => "buildinfo",
