@@ -29,12 +29,16 @@
 #define ASCON_ONGOING_OPERATION 2
 #define ASCON_NONCE_INCORRECT_LEN 3
 #define ASCON_NO_TAG_SET 4
+#define ASCON_NO_CTX_SET 5
+#define ASCON_NO_ONGOING_OPERATION 6
 
 static const OSSL_ITEM reason_strings[] = {
     {ASCON_NO_KEYLEN_SET, "no key length has been set"},
     {ASCON_ONGOING_OPERATION, "an operation is underway"},
     {ASCON_NONCE_INCORRECT_LEN, "incorrect length for nonce"},
     {ASCON_NO_TAG_SET, "no tag has been set"},
+    {ASCON_NO_CTX_SET, "no contect has been set"},
+    {ASCON_NO_ONGOING_OPERATION, "No operation is underway"},
     {0, NULL}};
 
 /*********************************************************************
@@ -164,10 +168,9 @@ static void *akif_ascon_newctx(void *vprovctx)
         }
         else
         {
-            // TODO: handle error
+
             return NULL;
         }
-        // ctx->keyl = keylen();
     }
     return ctx;
 }
@@ -230,7 +233,7 @@ static void akif_ascon_freectx(void *vctx)
     free(ctx);
 }
 
-/* MY INTERNAL INIT FUNCTION (glue)*/
+/* MY INTERNAL INIT FUNCTION (glue) */
 
 static int akif_ascon_internal_init(void *vctx, direction_t direction,
                                     const unsigned char *key, size_t keylen,
@@ -246,11 +249,9 @@ static int akif_ascon_internal_init(void *vctx, direction_t direction,
     {
         if (keylen != ASCON_AEAD128_KEY_LEN)
         {
-            // TODO: handle the error
-            // if (keylen == (size_t)-1 || keylen == 0) {
+
             ERR_raise(ERR_HANDLE(ctx), ASCON_NO_KEYLEN_SET);
             return OSSL_RV_ERROR;
-            //}
         }
     }
 
@@ -265,19 +266,15 @@ static int akif_ascon_internal_init(void *vctx, direction_t direction,
 
     ctx->direction = direction;
 
-    // allocate and initialize ctx->internal_vctx (void*)
-    // call and check return of libascon_whatever_init()
     if (key != NULL && nonce != NULL)
     {
-        // TODO: call ascon_aead128_init(...);
+
         ascon_aead128_init(ctx->internal_ctx, key, nonce);
         ctx->is_ongoing = true;
         return OSSL_RV_SUCCESS;
     }
     return OSSL_RV_SUCCESS;
 }
-
-/* PROVIDER'S INIT FUNCTIONS */
 
 static int akif_ascon_encrypt_init(void *vctx,
                                    const unsigned char *key, size_t keylen,
@@ -292,11 +289,9 @@ static int akif_ascon_decrypt_init(void *vctx,
                                    const unsigned char *nonce, size_t noncelen,
                                    const OSSL_PARAM params[])
 {
-    /* calling  'internal init' based on the 'direction' */
+
     return akif_ascon_internal_init(vctx, DECRYPTION, key, keylen, nonce, noncelen, params);
 }
-
-/* PROVIDER'S UPDATE FUNCTION*/
 
 static int akif_ascon_update(void *vctx, unsigned char *out, size_t *outl,
                              size_t outsize, const unsigned char *in, size_t inl)
@@ -307,18 +302,19 @@ static int akif_ascon_update(void *vctx, unsigned char *out, size_t *outl,
     if (ctx == NULL)
     {
         // TODO handle the error (err_raise whatever)
+        ERR_raise(ERR_HANDLE(ctx), ASCON_NO_CTX_SET);
         return OSSL_RV_ERROR;
     }
 
     if (ctx->is_ongoing == false)
     {
         // TODO ahndle this error with another reason code (err_raise whatver2)
+        ERR_raise(ERR_HANDLE(ctx), ASCON_NO_ONGOING_OPERATION);
         return OSSL_RV_ERROR;
     }
 
     if (ctx->direction == ENCRYPTION)
     {
-        // check if outsize is big enough
         const uint8_t *plaintext = in;
         size_t plaintext_len = inl;
         uint8_t *ciphertext = out;
@@ -354,12 +350,14 @@ static int akif_ascon_final(void *vctx, unsigned char *out, size_t *outl, size_t
     if (ctx == NULL)
     {
         // TODO handle the error (err_raise whatever)
+        ERR_raise(ERR_HANDLE(ctx), ASCON_NO_CTX_SET);
         return OSSL_RV_ERROR;
     }
 
     if (ctx->is_ongoing == false)
     {
         // TODO ahndle this error with another reason code (err_raise whatver2)
+        ERR_raise(ERR_HANDLE(ctx), ASCON_NO_ONGOING_OPERATION);
         return OSSL_RV_ERROR;
     }
 
