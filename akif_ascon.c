@@ -27,11 +27,14 @@
 /* The error reasons used here */
 #define ASCON_NO_KEYLEN_SET 1
 #define ASCON_ONGOING_OPERATION 2
-#define NONCE_INCORRECT_KEYLEN 3
+#define ASCON_NONCE_INCORRECT_LEN 3
+#define ASCON_NO_TAG_SET 4
+
 static const OSSL_ITEM reason_strings[] = {
     {ASCON_NO_KEYLEN_SET, "no key length has been set"},
     {ASCON_ONGOING_OPERATION, "an operation is underway"},
-    //{ ASCON_INCORRECT_KEYLEN, "incorrect key length" },
+    {ASCON_NONCE_INCORRECT_LEN, "incorrect length for nonce"},
+    {ASCON_NO_TAG_SET, "no tag has been set"},
     {0, NULL}};
 
 /*********************************************************************
@@ -257,7 +260,7 @@ static int akif_ascon_internal_init(void *vctx, direction_t direction,
         {
             // TODO: handle the error
             // if (noncelen == (size_t)-1 || noncelen == 0) {
-            ERR_raise(ERR_HANDLE(ctx), NONCE_INCORRECT_KEYLEN);
+            ERR_raise(ERR_HANDLE(ctx), ASCON_NONCE_INCORRECT_LEN);
             return OSSL_RV_ERROR;
             //}
         }
@@ -396,6 +399,7 @@ static int akif_ascon_final(void *vctx, unsigned char *out, size_t *outl, size_t
         else
         {
             // TODO: raise a specific error to say "tag was not set yet"
+            ERR_raise(ERR_HANDLE(ctx), ASCON_NO_TAG_SET);
             return OSSL_RV_ERROR;
         }
     }

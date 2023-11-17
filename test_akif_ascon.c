@@ -37,6 +37,7 @@ int main()
 
   printf(cBLUE "Trying to load %s provider" cNORM "\n", PROVIDER_NAME);
   T((c = EVP_CIPHER_fetch(libctx, CIPHER_NAME, NULL)) == NULL);
+  ERR_clear_error();
   T((prov = OSSL_PROVIDER_load(libctx, PROVIDER_NAME)) != NULL);
   T((c = EVP_CIPHER_fetch(libctx, CIPHER_NAME, NULL)) != NULL);
   T((ctx = EVP_CIPHER_CTX_new()) != NULL);
