@@ -308,15 +308,14 @@ static int akif_ascon_update(void *vctx, unsigned char *out, size_t *outl,
         size_t plaintext_len = inl;
         uint8_t *ciphertext = out;
         size_t ciphertext_len;
-//ascon_aead_ctx_t *temp = (ascon_aead_ctx_t*)ctx->internal_ctx;
-// TODO: call ascon_aead128_encrypt_update(...) and check its return value (we noticed it cannot fail), do we need to keep track of the returned number of bytes?;
+       
         ciphertext_len = ascon_aead128_encrypt_update(ctx->internal_ctx, ciphertext, plaintext, plaintext_len);
-        // check return
         *outl = ciphertext_len;
         return OSSL_RV_SUCCESS;
-    }
+    } 
 
-    else if (ctx->direction == DECRYPTION)
+   else
+     if (ctx->direction == DECRYPTION)
 
     {
         uint8_t *plaintext = out;
@@ -324,9 +323,8 @@ static int akif_ascon_update(void *vctx, unsigned char *out, size_t *outl,
         const uint8_t *ciphertext = in;
         size_t ciphertext_len = inl;
 
-        // TODO: call ascon_aead128_decrypt_update(...) and check;
+       
         plaintext_len = ascon_aead128_decrypt_update(ctx->internal_ctx, plaintext, ciphertext, ciphertext_len);
-        // check the return value
         *outl = plaintext_len;
         return OSSL_RV_SUCCESS;
 
