@@ -130,20 +130,11 @@ struct akif_ascon_ctx_st {
 
     struct provider_ctx_st *provctx;
 
-    // size_t keyl;                /* The configured length of the key */
-   //size_t keysize;             /* Size of the key currently used */
-   //size_t keypos;              /* The current position in the key */
+    uint8_t tag[FIXED_TAG_LENGTH];    //storing the tag with fixed length
+    bool is_tag_set;             // wether a tag has been computed or set
 
-
-
-    unsigned char* tag;
-    size_t tag_len;
-
-    unsigned char *nonce;       /* The IV in  case of Ascon*/
-    unsigned char *key;         /* A copy of the key */
-
-    direction_t direction;       /* either encryption or decryption */
-    int ongoing;                /* 1 = operation has started */
+    direction_t direction;      /* either encryption or decryption */
+    bool is_ongoing;            /* true = operation has started */
     intctx_t *internal_ctx;     /* a handle for the implementation internal context*/
 };
 #define ERR_HANDLE(ctx) ((ctx)->provctx->proverr_handle)
@@ -155,6 +146,8 @@ static void *akif_ascon_newctx(void *vprovctx)
     if (ctx != NULL) {
         memset(ctx, 0, sizeof(*ctx));
         ctx->provctx = vprovctx;
+        ctx->is_tag_set = false;
+        ctx->is_ongoing = false;
 
         intctx_t *intctx = calloc(1, sizeof(*intctx));
         if (intctx != NULL) {
@@ -168,20 +161,17 @@ static void *akif_ascon_newctx(void *vprovctx)
     return ctx;
 }
 
-#if 0
 static void akif_ascon_cleanctx(void *vctx)
 {
-    struct ascon_ctx_st *ctx = vctx;
+    struct akif_ascon_ctx_st *ctx = vctx;
 
     if (ctx == NULL)
         return;
-    free(ctx->key);
-    ctx->key = NULL;
-    //ctx->keypos = 0;
-    //ctx->enc = 0;
-    ctx->ongoing = 0;
+    ctx->is_tag_set = false;
+    ctx->is_ongoing = false;
+    memset(ctx->internal_ctx, 0, sizeof(*(ctx->internal_ctx)));
+    memset(ctx->tag, 0, sizeof(ctx->tag));
 }
-#endif
 
 static void *akif_ascon_dupctx(void *vctx)
 {
@@ -243,9 +233,6 @@ static int akif_ascon_internal_init(void *vctx, direction_t direction,
         return OSSL_RV_ERROR;
       //}
     }
-    free(ctx->key);
-    ctx->key = malloc(ASCON_AEAD128_KEY_LEN);
-    memcpy(ctx->key, key, ASCON_AEAD128_KEY_LEN);
   }
 
   if (nonce != NULL) {
@@ -256,14 +243,8 @@ static int akif_ascon_internal_init(void *vctx, direction_t direction,
         return OSSL_RV_ERROR;
       //}
     }
-    // free and malloc for ctx->nonce
-    free(ctx->nonce);
-    ctx->nonce = malloc(ASCON_AEAD_NONCE_LEN);
-    memcpy(ctx->nonce, nonce, ASCON_AEAD_NONCE_LEN);
   }
 
-  // ctx->keypos = 0; // remove structure
-  ctx->ongoing = 0;
   ctx->direction = direction;
 
   // allocate and initialize ctx->internal_vctx (void*)
@@ -271,6 +252,7 @@ static int akif_ascon_internal_init(void *vctx, direction_t direction,
   if (key != NULL && nonce != NULL) {
     // TODO: call ascon_aead128_init(...);
     ascon_aead128_init(ctx->internal_ctx, key, nonce);
+    ctx->is_ongoing = true;
     return OSSL_RV_SUCCESS;
   }
   return OSSL_RV_SUCCESS;
