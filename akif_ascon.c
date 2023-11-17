@@ -228,6 +228,7 @@ static int akif_ascon_internal_init(void *vctx, direction_t direction,
   struct akif_ascon_ctx_st *ctx = vctx;
 
   assert(ctx != NULL);
+  akif_ascon_cleanctx(ctx);
 
   if (key != NULL) {
     if (keylen != ASCON_AEAD128_KEY_LEN) {
