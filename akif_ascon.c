@@ -91,19 +91,19 @@ static OSSL_FUNC_provider_query_operation_fn akif_ascon_prov_operation;
 static OSSL_FUNC_provider_get_params_fn akif_ascon_prov_get_params;
 static OSSL_FUNC_provider_get_reason_strings_fn akif_ascon_prov_get_reason_strings;
 
-static OSSL_FUNC_cipher_newctx_fn akif_ascon_newctx;
-static OSSL_FUNC_cipher_encrypt_init_fn akif_ascon_encrypt_init;
-static OSSL_FUNC_cipher_decrypt_init_fn akif_ascon_decrypt_init;
-static OSSL_FUNC_cipher_update_fn akif_ascon_update;
-static OSSL_FUNC_cipher_final_fn akif_ascon_final;
-static OSSL_FUNC_cipher_dupctx_fn akif_ascon_dupctx;
-static OSSL_FUNC_cipher_freectx_fn akif_ascon_freectx;
-static OSSL_FUNC_cipher_get_params_fn akif_ascon_get_params;
-static OSSL_FUNC_cipher_gettable_params_fn akif_ascon_gettable_params;
-static OSSL_FUNC_cipher_set_ctx_params_fn akif_ascon_set_ctx_params;
-static OSSL_FUNC_cipher_get_ctx_params_fn akif_ascon_get_ctx_params;
-static OSSL_FUNC_cipher_settable_ctx_params_fn akif_ascon_settable_ctx_params;
-static OSSL_FUNC_cipher_gettable_ctx_params_fn akif_ascon_gettable_ctx_params;
+static OSSL_FUNC_cipher_newctx_fn akifascon128_newctx;
+static OSSL_FUNC_cipher_encrypt_init_fn akifascon128_encrypt_init;
+static OSSL_FUNC_cipher_decrypt_init_fn akifascon128_decrypt_init;
+static OSSL_FUNC_cipher_update_fn akifascon128_update;
+static OSSL_FUNC_cipher_final_fn akifascon128_final;
+static OSSL_FUNC_cipher_dupctx_fn akifascon128_dupctx;
+static OSSL_FUNC_cipher_freectx_fn akifascon128_freectx;
+static OSSL_FUNC_cipher_get_params_fn akifascon128_get_params;
+static OSSL_FUNC_cipher_gettable_params_fn akifascon128_gettable_params;
+static OSSL_FUNC_cipher_set_ctx_params_fn akifascon128_set_ctx_params;
+static OSSL_FUNC_cipher_get_ctx_params_fn akifascon128_get_ctx_params;
+static OSSL_FUNC_cipher_settable_ctx_params_fn akifascon128_settable_ctx_params;
+static OSSL_FUNC_cipher_gettable_ctx_params_fn akifascon128_gettable_ctx_params;
 
 #define DEFAULT_KEYLENGTH 16 /* amount of bytes == 128 bits */
 #define BLOCKSIZE 1          /* amount of bytes */
@@ -150,7 +150,7 @@ struct akif_ascon_ctx_st
 };
 #define ERR_HANDLE(ctx) ((ctx)->provctx->proverr_handle)
 
-static void *akif_ascon_newctx(void *vprovctx)
+static void *akifascon128_newctx(void *vprovctx)
 {
     struct akif_ascon_ctx_st *ctx = malloc(sizeof(*ctx));
 
@@ -175,7 +175,7 @@ static void *akif_ascon_newctx(void *vprovctx)
     return ctx;
 }
 
-static void akif_ascon_cleanctx(void *vctx)
+static void akifascon128_cleanctx(void *vctx)
 {
     struct akif_ascon_ctx_st *ctx = vctx;
 
@@ -187,7 +187,7 @@ static void akif_ascon_cleanctx(void *vctx)
     memset(ctx->tag, 0, sizeof(ctx->tag));
 }
 
-static void *akif_ascon_dupctx(void *vctx)
+static void *akifascon128_dupctx(void *vctx)
 {
     struct akif_ascon_ctx_st *src = vctx;
     struct akif_ascon_ctx_st *dst = NULL;
@@ -220,7 +220,7 @@ static void *akif_ascon_dupctx(void *vctx)
 #endif
 }
 
-static void akif_ascon_freectx(void *vctx)
+static void akifascon128_freectx(void *vctx)
 {
     struct akif_ascon_ctx_st *ctx = vctx;
 
@@ -228,14 +228,14 @@ static void akif_ascon_freectx(void *vctx)
         return;
 
     ctx->provctx = NULL;
-    akif_ascon_cleanctx(ctx);
+    akifascon128_cleanctx(ctx);
     free(ctx->internal_ctx);
     free(ctx);
 }
 
 /* MY INTERNAL INIT FUNCTION (glue) */
 
-static int akif_ascon_internal_init(void *vctx, direction_t direction,
+static int akifascon128_internal_init(void *vctx, direction_t direction,
                                     const unsigned char *key, size_t keylen,
                                     const unsigned char *nonce, size_t noncelen,
                                     const OSSL_PARAM params[])
@@ -243,7 +243,7 @@ static int akif_ascon_internal_init(void *vctx, direction_t direction,
     struct akif_ascon_ctx_st *ctx = vctx;
 
     assert(ctx != NULL);
-    akif_ascon_cleanctx(ctx);
+    akifascon128_cleanctx(ctx);
 
     if (key != NULL)
     {
@@ -276,7 +276,7 @@ static int akif_ascon_internal_init(void *vctx, direction_t direction,
     return OSSL_RV_SUCCESS;
 }
 
-static int akif_ascon_encrypt_init(void *vctx,
+static int akifascon128_encrypt_init(void *vctx,
                                    const unsigned char *key, size_t keylen,
                                    const unsigned char *nonce, size_t noncelen,
                                    const OSSL_PARAM params[])
@@ -284,16 +284,16 @@ static int akif_ascon_encrypt_init(void *vctx,
     return akif_ascon_internal_init(vctx, ENCRYPTION, key, keylen, nonce, noncelen, params);
 }
 
-static int akif_ascon_decrypt_init(void *vctx,
+static int akifascon128_decrypt_init(void *vctx,
                                    const unsigned char *key, size_t keylen,
                                    const unsigned char *nonce, size_t noncelen,
                                    const OSSL_PARAM params[])
 {
 
-    return akif_ascon_internal_init(vctx, DECRYPTION, key, keylen, nonce, noncelen, params);
+    return akifascon128_internal_init(vctx, DECRYPTION, key, keylen, nonce, noncelen, params);
 }
 
-static int akif_ascon_update(void *vctx, unsigned char *out, size_t *outl,
+static int akifascon128_update(void *vctx, unsigned char *out, size_t *outl,
                              size_t outsize, const unsigned char *in, size_t inl)
 {
 
@@ -342,7 +342,7 @@ static int akif_ascon_update(void *vctx, unsigned char *out, size_t *outl,
 
 /* PROVIDER'S FINAL FUNCTION*/
 
-static int akif_ascon_final(void *vctx, unsigned char *out, size_t *outl, size_t outsize)
+static int akifascon128_final(void *vctx, unsigned char *out, size_t *outl, size_t outsize)
 {
 
     struct akif_ascon_ctx_st *ctx = vctx;
@@ -410,19 +410,20 @@ static int akif_ascon_final(void *vctx, unsigned char *out, size_t *outl, size_t
 }
 
 /* Parameters that libcrypto can get from this implementation */
-static const OSSL_PARAM *akif_ascon_gettable_params(void *provctx)
+static const OSSL_PARAM *akifascon128_gettable_params(void *provctx)
 {
     static const OSSL_PARAM table[] = {
         {"blocksize", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0},
         {"keylen", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0},
         {"ivlen", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0},
+        // TODO we should expose "aead" as 1
         {NULL, 0, NULL, 0, 0},
     };
 
     return table;
 }
 
-static int akif_ascon_get_params(OSSL_PARAM params[])
+static int akifascon128_get_params(OSSL_PARAM params[])
 {
     OSSL_PARAM *p;
     int ok = 1;
@@ -443,7 +444,7 @@ static int akif_ascon_get_params(OSSL_PARAM params[])
     return ok;
 }
 
-static const OSSL_PARAM *akif_ascon_gettable_ctx_params(void *cctx, void *provctx)
+static const OSSL_PARAM *akifascon128_gettable_ctx_params(void *cctx, void *provctx)
 {
     static const OSSL_PARAM table[] = {
         {S_PARAM_keylen, OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0},
@@ -455,7 +456,7 @@ static const OSSL_PARAM *akif_ascon_gettable_ctx_params(void *cctx, void *provct
     return table;
 }
 
-static int akif_ascon_get_ctx_params(void *vctx, OSSL_PARAM params[])
+static int akifascon128_get_ctx_params(void *vctx, OSSL_PARAM params[])
 {
     struct akif_ascon_ctx_st *ctx = vctx;
     int ok = 1;
@@ -495,7 +496,7 @@ static int akif_ascon_get_ctx_params(void *vctx, OSSL_PARAM params[])
 }
 
 /* Parameters that libcrypto can send to this implementation */
-static const OSSL_PARAM *akif_ascon_settable_ctx_params(void *cctx, void *provctx)
+static const OSSL_PARAM *akifascon128_settable_ctx_params(void *cctx, void *provctx)
 {
     static const OSSL_PARAM table[] = {
         //{ S_PARAM_keylen, OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
@@ -505,7 +506,7 @@ static const OSSL_PARAM *akif_ascon_settable_ctx_params(void *cctx, void *provct
     return table;
 }
 
-static int akif_ascon_set_ctx_params(void *vctx, const OSSL_PARAM params[])
+static int akifascon128_set_ctx_params(void *vctx, const OSSL_PARAM params[])
 {
     struct akif_ascon_ctx_st *ctx = vctx;
     const OSSL_PARAM *p;
@@ -543,26 +544,25 @@ static int akif_ascon_set_ctx_params(void *vctx, const OSSL_PARAM params[])
 typedef void (*funcptr_t)(void);
 
 /* The Akif-Ascon dispatch table */
-static const OSSL_DISPATCH akif_ascon_functions[] = {
-    {OSSL_FUNC_CIPHER_NEWCTX, (funcptr_t)akif_ascon_newctx},
-    {OSSL_FUNC_CIPHER_ENCRYPT_INIT, (funcptr_t)akif_ascon_encrypt_init},
-    {OSSL_FUNC_CIPHER_DECRYPT_INIT, (funcptr_t)akif_ascon_decrypt_init},
-    {OSSL_FUNC_CIPHER_UPDATE, (funcptr_t)akif_ascon_update},
-    {OSSL_FUNC_CIPHER_FINAL, (funcptr_t)akif_ascon_final},
-    {OSSL_FUNC_CIPHER_DUPCTX, (funcptr_t)akif_ascon_dupctx},
-    {OSSL_FUNC_CIPHER_FREECTX, (funcptr_t)akif_ascon_freectx},
-    {OSSL_FUNC_CIPHER_GET_PARAMS, (funcptr_t)akif_ascon_get_params},
-    {OSSL_FUNC_CIPHER_GETTABLE_PARAMS, (funcptr_t)akif_ascon_gettable_params},
-    {OSSL_FUNC_CIPHER_GET_CTX_PARAMS, (funcptr_t)akif_ascon_get_ctx_params},
-    {OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS, (funcptr_t)akif_ascon_gettable_ctx_params},
-    {OSSL_FUNC_CIPHER_SET_CTX_PARAMS, (funcptr_t)akif_ascon_set_ctx_params},
-    {OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS, (funcptr_t)akif_ascon_settable_ctx_params},
+static const OSSL_DISPATCH akifascon128_functions[] = {
+    {OSSL_FUNC_CIPHER_NEWCTX, (funcptr_t)akifascon128_newctx},
+    {OSSL_FUNC_CIPHER_ENCRYPT_INIT, (funcptr_t)akifascon128_encrypt_init},
+    {OSSL_FUNC_CIPHER_DECRYPT_INIT, (funcptr_t)akifascon128_decrypt_init},
+    {OSSL_FUNC_CIPHER_UPDATE, (funcptr_t)akifascon128_update},
+    {OSSL_FUNC_CIPHER_FINAL, (funcptr_t)akifascon128_final},
+    {OSSL_FUNC_CIPHER_DUPCTX, (funcptr_t)akifascon128_dupctx},
+    {OSSL_FUNC_CIPHER_FREECTX, (funcptr_t)akifascon128_freectx},
+    {OSSL_FUNC_CIPHER_GET_PARAMS, (funcptr_t)akifascon128_get_params},
+    {OSSL_FUNC_CIPHER_GETTABLE_PARAMS, (funcptr_t)akifascon128_gettable_params},
+    {OSSL_FUNC_CIPHER_GET_CTX_PARAMS, (funcptr_t)akifascon128_get_ctx_params},
+    {OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS, (funcptr_t)akifascon128_gettable_ctx_params},
+    {OSSL_FUNC_CIPHER_SET_CTX_PARAMS, (funcptr_t)akifascon128_set_ctx_params},
+    {OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS, (funcptr_t)akifascon128_settable_ctx_params},
     {0, NULL}};
 
 /* The table of ciphers this provider offers */
 static const OSSL_ALGORITHM akif_ascon_ciphers[] = {
-    {"akifascon128", "x.author='" AUTHOR "'",
-     akif_ascon_functions},
+    {"akifascon128", "x.author='" AUTHOR "'", akifascon128_functions},
     {NULL, NULL, NULL}};
 
 /* The function that returns the appropriate algorithm table per operation */
