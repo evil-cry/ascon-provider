@@ -281,7 +281,7 @@ static int akifascon128_encrypt_init(void *vctx,
                                    const unsigned char *nonce, size_t noncelen,
                                    const OSSL_PARAM params[])
 {
-    return akif_ascon_internal_init(vctx, ENCRYPTION, key, keylen, nonce, noncelen, params);
+    return akifascon128_internal_init(vctx, ENCRYPTION, key, keylen, nonce, noncelen, params);
 }
 
 static int akifascon128_decrypt_init(void *vctx,

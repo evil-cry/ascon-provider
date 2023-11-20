@@ -37,6 +37,11 @@ static const unsigned char key[] =
     {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
      'Z', 'W', 'T', 'Q', 'N', 'K', 'H', 'B'};
 
+/* Expected AEAD Tag value */
+static const unsigned char exp_tag[FIXED_TAG_LENGTH] = {
+    0xe7, 0x32, 0x97, 0x38, 0x69, 0x7e, 0x49, 0xbb,
+    0x8b, 0x51, 0xf3, 0xdb, 0xc9, 0x43, 0xcf, 0x9f};
+
 static unsigned char ciphertext[sizeof(plaintext)];
 static unsigned char plaintext2[sizeof(plaintext)];
 
@@ -56,6 +61,7 @@ int get_tag_helper(EVP_CIPHER_CTX *ctx, uint8_t *out, size_t *outl, size_t outsi
   OSSL_PARAM params[2] = {OSSL_PARAM_END, OSSL_PARAM_END};
   params[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG,
                                                 out, outsize);
+
   T(EVP_CIPHER_CTX_get_params(ctx, params));
   actually_written = params[0].return_size;
   T(actually_written == outsize);
@@ -77,7 +83,23 @@ int get_tag_helper(EVP_CIPHER_CTX *ctx, uint8_t *out, size_t *outl, size_t outsi
 // - 0 otherwise
 int set_tag_helper(EVP_CIPHER_CTX *ctx, const uint8_t *in, size_t inl)
 {
-  return 0;
+  // OSSL_PARAM params[2] = {OSSL_PARAM_END, OSSL_PARAM_END};
+  // params[0] = OSSL_PARAM_construct_octet_string();
+  // if (!EVP_CIPHER_CTX_set_params(ctx, params))
+
+  OSSL_PARAM params[2] = {OSSL_PARAM_END, OSSL_PARAM_END};
+
+  params[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG,
+                                                (void *)in, inl);
+
+  if (EVP_CIPHER_CTX_set_params(ctx, params))
+    ;
+  // written_bytes = params[0].return_size;
+
+  printf("Expected Tag:\n");
+  BIO_dump_fp(stdout, in, inl);
+
+  return 1;
 }
 
 int main()
