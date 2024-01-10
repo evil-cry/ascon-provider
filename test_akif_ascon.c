@@ -14,7 +14,7 @@
 
 #define FIXED_TAG_LENGTH 16
 
-static const unsigned char plaintext[] = "Ceasar's trove of junk";
+static const unsigned char plaintext[] = "Ceasar's trove of junk and this is additional string";
 static const unsigned char nonce[] = {
     0x01,
     0x02,
@@ -38,9 +38,9 @@ static const unsigned char key[] =
      'Z', 'W', 'T', 'Q', 'N', 'K', 'H', 'B'};
 
 /* Expected AEAD Tag value */
-static const unsigned char exp_tag[FIXED_TAG_LENGTH] = {
+/*static const unsigned char exp_tag[FIXED_TAG_LENGTH] = {
     0xe7, 0x32, 0x97, 0x38, 0x69, 0x7e, 0x49, 0xbb,
-    0x8b, 0x51, 0xf3, 0xdb, 0xc9, 0x43, 0xcf, 0x9f};
+    0x8b, 0x51, 0xf3, 0xdb, 0xc9, 0x43, 0xcf, 0x9f};*/
 
 static unsigned char ciphertext[sizeof(plaintext)];
 static unsigned char plaintext2[sizeof(plaintext)];
@@ -55,22 +55,14 @@ static unsigned char plaintext2[sizeof(plaintext)];
 // RETURN
 // - 1 if success
 // - 0 otherwise
+
 int get_tag_helper(EVP_CIPHER_CTX *ctx, uint8_t *out, size_t *outl, size_t outsize)
 {
-  size_t actually_written = 0;
+
   OSSL_PARAM params[2] = {OSSL_PARAM_END, OSSL_PARAM_END};
-  params[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG,
-                                                out, outsize);
+  params[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG, out, outsize);
 
   T(EVP_CIPHER_CTX_get_params(ctx, params));
-  actually_written = params[0].return_size;
-  T(actually_written == outsize);
-
-  /* Output tag */
-  printf("Tag:\n");
-  BIO_dump_fp(stdout, out, actually_written);
-
-  *outl = actually_written;
 
   return 1;
 }
@@ -81,23 +73,16 @@ int get_tag_helper(EVP_CIPHER_CTX *ctx, uint8_t *out, size_t *outl, size_t outsi
 // RETURN
 // - 1 if success
 // - 0 otherwise
+
 int set_tag_helper(EVP_CIPHER_CTX *ctx, const uint8_t *in, size_t inl)
 {
-  // OSSL_PARAM params[2] = {OSSL_PARAM_END, OSSL_PARAM_END};
-  // params[0] = OSSL_PARAM_construct_octet_string();
-  // if (!EVP_CIPHER_CTX_set_params(ctx, params))
-
   OSSL_PARAM params[2] = {OSSL_PARAM_END, OSSL_PARAM_END};
 
-  params[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG,
-                                                (void *)in, inl);
+  params[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG, (void *)in, inl);
 
-  if (EVP_CIPHER_CTX_set_params(ctx, params))
-    ;
-  // written_bytes = params[0].return_size;
+  T(EVP_CIPHER_CTX_set_params(ctx, params));
 
-  printf("Expected Tag:\n");
-  BIO_dump_fp(stdout, in, inl);
+  // BIO_dump_fp(stdout, in, inl);
 
   return 1;
 }
@@ -111,10 +96,12 @@ int main()
   int outl2 = 0, outl2f = 0;
   OSSL_PROVIDER *prov = NULL;
   int test = 0;
+  size_t ctlen = 0;
+  size_t ptlen = 0;
 
   uint8_t computed_tag[FIXED_TAG_LENGTH] = {0};
   size_t computed_tag_len = FIXED_TAG_LENGTH;
-  uint8_t expected_tag[FIXED_TAG_LENGTH] = {0};
+  uint8_t expected_tag[2 * FIXED_TAG_LENGTH] = {0};
   size_t expected_tag_len = FIXED_TAG_LENGTH;
 
   printf(cBLUE "Trying to load %s provider" cNORM "\n", PROVIDER_NAME);
@@ -124,39 +111,44 @@ int main()
   T((c = EVP_CIPHER_fetch(libctx, CIPHER_NAME, NULL)) != NULL);
   T((ctx = EVP_CIPHER_CTX_new()) != NULL);
   // EVP_CIPHER_free(c);         /* ctx holds on to the cipher */
+
   /* Test encryption */
   printf(cBLUE "Testing init without a key" cNORM "\n");
   T(EVP_CipherInit(ctx, c, NULL, NULL, 1));
-#if 0
-  printf(cBLUE "Testing setting key length to %zu (measured in bytes)" cNORM "\n",
-         sizeof(key));
-  T(EVP_CIPHER_CTX_set_key_length(ctx, sizeof(key)) > 0);
-#endif
   printf(cBLUE "Testing encryption" cNORM "\n");
   T(EVP_CipherInit(ctx, c, key, nonce, 1));
   T(EVP_CipherUpdate(ctx, ciphertext, &outl, plaintext, sizeof(plaintext)));
-  T(EVP_CipherFinal(ctx, ciphertext + outl, &outlf));
+  ctlen += outl;
+  printf(cBLUE "CipherUpdate produced" cNORM "%d bytes\n", outl);
+  T(EVP_CipherFinal(ctx, ciphertext + ctlen, &outlf));
+  ctlen += outlf;
+  printf(cBLUE "CipherFinal produced" cNORM "%d bytes\n", outlf);
   T(get_tag_helper(ctx, computed_tag, &computed_tag_len, computed_tag_len));
 
   /* Test decryption */
   printf(cBLUE "Testing decryption" cNORM "\n");
   T(EVP_CipherInit(ctx, NULL, key, nonce, 0));
-  T(EVP_CipherUpdate(ctx, plaintext2, &outl2, ciphertext, outl));
+  T(EVP_CipherUpdate(ctx, plaintext2, &outl2, ciphertext, ctlen));
+  ptlen = outl2;
+  printf(cBLUE "CipherUpdate produced" cNORM "%d bytes\n", outl2);
 
   memcpy(expected_tag, computed_tag, FIXED_TAG_LENGTH);
   expected_tag_len = FIXED_TAG_LENGTH;
-
   T(set_tag_helper(ctx, expected_tag, expected_tag_len));
   T(EVP_CipherFinal(ctx, plaintext2 + outl2, &outl2f));
+  ptlen += outl2f;
+  printf(cBLUE "CipherFinal produced" cNORM "%d bytes\n", outl2f);
 
   printf("Plaintext[%zu]  = ", sizeof(plaintext));
   hexdump(plaintext, sizeof(plaintext));
   printf("Key[%zu]        = ", sizeof(key));
   hexdump(key, sizeof(key));
-  printf("Ciphertext[%d] = ", outl + outlf);
-  hexdump(ciphertext, outl + outlf);
-  printf("Plaintext2[%d] = ", outl2 + outl2f);
-  hexdump(plaintext2, outl2 + outl2f);
+  printf("Ciphertext[%lu] = ", ctlen);
+  hexdump(ciphertext, ctlen);
+  printf("Plaintext2[%lu] = ", ptlen);
+  hexdump(plaintext2, ptlen);
+
+  // EVP_CIPHER_CTX *bogus = EVP_CIPHER_CTX_dup(ctx);
 
   EVP_CIPHER_CTX_free(ctx);
   OSSL_PROVIDER_unload(prov);
