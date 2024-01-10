@@ -31,6 +31,8 @@
 #define ASCON_NO_TAG_SET 4
 #define ASCON_NO_CTX_SET 5
 #define ASCON_NO_ONGOING_OPERATION 6
+#define ASCON_ONLY_FIXED_TAG_LENGTH_SUPPORTED 7
+#define ASCON_NOT_IMPLEMENTED_YET 8
 
 static const OSSL_ITEM reason_strings[] = {
     {ASCON_NO_KEYLEN_SET, "no key length has been set"},
@@ -39,6 +41,8 @@ static const OSSL_ITEM reason_strings[] = {
     {ASCON_NO_TAG_SET, "no tag has been set"},
     {ASCON_NO_CTX_SET, "no contect has been set"},
     {ASCON_NO_ONGOING_OPERATION, "No operation is underway"},
+    {ASCON_ONLY_FIXED_TAG_LENGTH_SUPPORTED, "Only a fixed tag length of 16 bytes is supported by this implementation"},
+    {ASCON_NOT_IMPLEMENTED_YET, "Not implemented yet"},
     {0, NULL}};
 
 /*********************************************************************
@@ -179,8 +183,6 @@ static void akifascon128_cleanctx(void *vctx)
 {
     struct akif_ascon_ctx_st *ctx = vctx;
 
-    if (ctx == NULL)
-        return;
     ctx->is_tag_set = false;
     ctx->is_ongoing = false;
     memset(ctx->internal_ctx, 0, sizeof(*(ctx->internal_ctx)));
@@ -216,6 +218,8 @@ static void *akifascon128_dupctx(void *vctx)
     return dst;
 #else
     // TO BE IMPLEMENTED
+    ERR_raise(ERR_HANDLE(src), ASCON_NOT_IMPLEMENTED_YET);
+
     return NULL;
 #endif
 }
@@ -236,24 +240,14 @@ static void akifascon128_freectx(void *vctx)
 /* MY INTERNAL INIT FUNCTION (glue) */
 
 static int akifascon128_internal_init(void *vctx, direction_t direction,
-                                    const unsigned char *key, size_t keylen,
-                                    const unsigned char *nonce, size_t noncelen,
-                                    const OSSL_PARAM params[])
+                                      const unsigned char *key, size_t keylen,
+                                      const unsigned char *nonce, size_t noncelen,
+                                      const OSSL_PARAM params[])
 {
     struct akif_ascon_ctx_st *ctx = vctx;
 
     assert(ctx != NULL);
     akifascon128_cleanctx(ctx);
-
-    if (key != NULL)
-    {
-        if (keylen != ASCON_AEAD128_KEY_LEN)
-        {
-
-            ERR_raise(ERR_HANDLE(ctx), ASCON_NO_KEYLEN_SET);
-            return OSSL_RV_ERROR;
-        }
-    }
 
     if (nonce != NULL)
     {
@@ -277,38 +271,38 @@ static int akifascon128_internal_init(void *vctx, direction_t direction,
 }
 
 static int akifascon128_encrypt_init(void *vctx,
-                                   const unsigned char *key, size_t keylen,
-                                   const unsigned char *nonce, size_t noncelen,
-                                   const OSSL_PARAM params[])
+                                     const unsigned char *key, size_t keylen,
+                                     const unsigned char *nonce, size_t noncelen,
+                                     const OSSL_PARAM params[])
 {
     return akifascon128_internal_init(vctx, ENCRYPTION, key, keylen, nonce, noncelen, params);
 }
 
 static int akifascon128_decrypt_init(void *vctx,
-                                   const unsigned char *key, size_t keylen,
-                                   const unsigned char *nonce, size_t noncelen,
-                                   const OSSL_PARAM params[])
+                                     const unsigned char *key, size_t keylen,
+                                     const unsigned char *nonce, size_t noncelen,
+                                     const OSSL_PARAM params[])
 {
 
     return akifascon128_internal_init(vctx, DECRYPTION, key, keylen, nonce, noncelen, params);
 }
 
 static int akifascon128_update(void *vctx, unsigned char *out, size_t *outl,
-                             size_t outsize, const unsigned char *in, size_t inl)
+                               size_t outsize, const unsigned char *in, size_t inl)
 {
 
     struct akif_ascon_ctx_st *ctx = vctx;
 
     if (ctx == NULL)
     {
-        // TODO handle the error (err_raise whatever)
+        // handling the error
         ERR_raise(ERR_HANDLE(ctx), ASCON_NO_CTX_SET);
         return OSSL_RV_ERROR;
     }
 
     if (ctx->is_ongoing == false)
     {
-        // TODO ahndle this error with another reason code (err_raise whatver2)
+        // handling the error
         ERR_raise(ERR_HANDLE(ctx), ASCON_NO_ONGOING_OPERATION);
         return OSSL_RV_ERROR;
     }
@@ -349,14 +343,12 @@ static int akifascon128_final(void *vctx, unsigned char *out, size_t *outl, size
 
     if (ctx == NULL)
     {
-        // TODO handle the error (err_raise whatever)
         ERR_raise(ERR_HANDLE(ctx), ASCON_NO_CTX_SET);
         return OSSL_RV_ERROR;
     }
 
     if (ctx->is_ongoing == false)
     {
-        // TODO ahndle this error with another reason code (err_raise whatver2)
         ERR_raise(ERR_HANDLE(ctx), ASCON_NO_ONGOING_OPERATION);
         return OSSL_RV_ERROR;
     }
