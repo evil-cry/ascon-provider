@@ -453,29 +453,40 @@ static int akifascon128_get_ctx_params(void *vctx, OSSL_PARAM params[])
     struct akif_ascon_ctx_st *ctx = vctx;
     int ok = 1;
 
-    // TODO: to be implemented properly
 #if 1
     OSSL_PARAM *p;
 
     for (p = params; p->key != NULL; p++)
         switch (akif_ascon_params_parse(p->key))
         {
-        case V_PARAM_keylen:
-            ok &= provnum_set_size_t(p, ASCON_AEAD128_KEY_LEN) >= 0;
-            break;
         case V_PARAM_noncelen:
             ok &= provnum_set_size_t(p, ASCON_AEAD_NONCE_LEN) >= 0;
             break;
         case V_PARAM_tag:
-            // TODO: check if p->data_type matches "octect string"
-            // TODO: check that p->data (the given buffer) is not NULL
-            // TODO: check if the given bugger is big enough (p->data_size is big enough?)
+            // check if p->data_type matches "octect string"
+            // check that p->data (the given buffer) is not NULL
+            if (p->data == NULL || p->data_type != OSSL_PARAM_OCTET_STRING)
+            {
+                ok = 0;
+                break;
+            }
 
-            // TODO: check if ctx->is_tag_set is true
+            // Check if the given buffer is big enough (p->data_size is big enough?)
+            if (p->data_size < FIXED_TAG_LENGTH)
+            {
+                ok = 0;
+                break;
+            }
 
+            // Check if ctx->is_tag_set is true
+            if (!ctx->is_tag_set)
+            {
+                ERR_raise(ERR_HANDLE(ctx), ASCON_NO_TAG_SET);
+                ok = 0;
+                break;
+            }
+            // copy tag to destination
             memcpy(p->data, ctx->tag, FIXED_TAG_LENGTH);
-            // TODO: should we check the return of memcpy?
-
             p->return_size = FIXED_TAG_LENGTH;
             ok &= 1;
             break;
@@ -491,7 +502,7 @@ static int akifascon128_get_ctx_params(void *vctx, OSSL_PARAM params[])
 static const OSSL_PARAM *akifascon128_settable_ctx_params(void *cctx, void *provctx)
 {
     static const OSSL_PARAM table[] = {
-        //{ S_PARAM_keylen, OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
+        {S_PARAM_tag, OSSL_PARAM_OCTET_STRING, NULL, FIXED_TAG_LENGTH, 0},
         {NULL, 0, NULL, 0, 0},
     };
 
@@ -504,26 +515,35 @@ static int akifascon128_set_ctx_params(void *vctx, const OSSL_PARAM params[])
     const OSSL_PARAM *p;
     int ok = 1;
 
-    // TODO: to be implemented properly
-#if 0
-    if (ctx->ongoing) {
-        ERR_raise(ERR_HANDLE(ctx), AKIF_ASCON_ONGOING_OPERATION);
-        return 0;
-    }
+    // #if 0
+    // if (ctx->is_ongoing) {
+    //    ERR_raise(ERR_HANDLE(ctx), ASCON_ONGOING_OPERATION);
+    //   return 0;
+    //}
 
     for (p = params; p->key != NULL; p++)
-        switch (akif_ascon_params_parse(p->key)) {
-        case V_PARAM_keylen:
+        switch (akif_ascon_params_parse(p->key))
         {
-            size_t keyl = 0;
-            int res = provnum_get_size_t(&keyl, p) >= 0;
+        case V_PARAM_tag:
+        {
+            if (p->data == NULL || p->data_type != OSSL_PARAM_OCTET_STRING)
+            {
+                ok = 0;
+                break;
+            }
 
-            ok &= res;
-            if (res)
-                ctx->keyl = keyl;
+            // We only accept stricyl 16B tags here
+            if (p->data_size != FIXED_TAG_LENGTH)
+            {
+                ERR_raise(ERR_HANDLE(ctx), ASCON_ONLY_FIXED_TAG_LENGTH_SUPPORTED);
+                ok = 0;
+                break;
+            }
+            memcpy(ctx->tag, p->data, FIXED_TAG_LENGTH);
+            ctx->is_tag_set = 1;
         }
         }
-#endif
+    // #endif
     return ok;
 }
 
