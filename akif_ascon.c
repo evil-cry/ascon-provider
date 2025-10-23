@@ -194,34 +194,29 @@ static void *akifascon128_dupctx(void *vctx)
     struct akif_ascon_ctx_st *src = vctx;
     struct akif_ascon_ctx_st *dst = NULL;
 
-#if 0
-    if (src == NULL
-        || (dst = ascon_newctx(NULL)) == NULL)
+    if (src == NULL)
+        return NULL;
 
-    dst->provctx = src->provctx;
-    dst->provctx->proverr_handle =
-        proverr_dup_handle(src->provctx->proverr_handle);
-    dst->keyl = src->keyl;
+    // Create new context using the same provider context
+    if ((dst = akifascon128_newctx(src->provctx)) == NULL)
+        return NULL;
 
-    if (src->key != NULL) {
-        if ((dst->key = malloc(src->keyl)) == NULL) {
-            akif_ascon_freectx(dst);
-            return NULL;
-        }
-        memcpy(dst->key, src->key, src->keyl);
+    // Copy all context fields
+    dst->direction = src->direction;
+    dst->is_ongoing = src->is_ongoing;
+    dst->is_tag_set = src->is_tag_set;
+
+    // Copy tag if it's set
+    if (src->is_tag_set) {
+        memcpy(dst->tag, src->tag, FIXED_TAG_LENGTH);
     }
 
-    dst->keypos = src->keypos;
-    dst->enc = src->enc;
-    dst->ongoing = src->ongoing;
+    // Deep copy the internal LibAscon context
+    if (src->internal_ctx != NULL && dst->internal_ctx != NULL) {
+        memcpy(dst->internal_ctx, src->internal_ctx, sizeof(*dst->internal_ctx));
+    }
 
     return dst;
-#else
-    // TO BE IMPLEMENTED
-    ERR_raise(ERR_HANDLE(src), ASCON_NOT_IMPLEMENTED_YET);
-
-    return NULL;
-#endif
 }
 
 static void akifascon128_freectx(void *vctx)

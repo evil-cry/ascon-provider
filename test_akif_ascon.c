@@ -148,7 +148,26 @@ int main()
   printf("Plaintext2[%lu] = ", ptlen);
   hexdump(plaintext2, ptlen);
 
-  // EVP_CIPHER_CTX *bogus = EVP_CIPHER_CTX_dup(ctx);
+  /* Test context duplication using OpenSSL 3.0+ approach */
+  printf(cBLUE "Testing context duplication" cNORM "\n");
+  EVP_CIPHER_CTX *bogus = EVP_CIPHER_CTX_new();
+  if (bogus != NULL) {
+    // Initialize with the same cipher
+    const EVP_CIPHER *cipher = EVP_CIPHER_CTX_cipher(ctx);
+    if (EVP_CipherInit_ex(bogus, cipher, NULL, NULL, NULL, -1) == 1) {
+      // Copy the context state
+      if (EVP_CIPHER_CTX_copy(bogus, ctx) == 1) {
+        printf(cGREEN "Context duplication successful" cNORM "\n");
+      } else {
+        printf(cRED "Context copy failed" cNORM "\n");
+      }
+    } else {
+      printf(cRED "Context initialization failed" cNORM "\n");
+    }
+    EVP_CIPHER_CTX_free(bogus);
+  } else {
+    printf(cRED "Context allocation failed" cNORM "\n");
+  }
 
   EVP_CIPHER_CTX_free(ctx);
   OSSL_PROVIDER_unload(prov);
