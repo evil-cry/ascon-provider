@@ -172,7 +172,7 @@ static void *akifascon128_newctx(void *vprovctx)
         }
         else
         {
-
+            free(ctx);
             return NULL;
         }
     }
@@ -403,7 +403,7 @@ static const OSSL_PARAM *akifascon128_gettable_params(void *provctx)
         {"blocksize", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0},
         {"keylen", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0},
         {"ivlen", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0},
-        // TODO we should expose "aead" as 1
+        {"aead", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0},
         {NULL, 0, NULL, 0, 0},
     };
 
@@ -426,6 +426,9 @@ static int akifascon128_get_params(OSSL_PARAM params[])
             break;
         case V_PARAM_noncelen:
             ok &= provnum_set_size_t(p, ASCON_AEAD_NONCE_LEN) >= 0;
+            break;
+        case V_PARAM_aead:
+            ok &= provnum_set_size_t(p, 1) >= 0;  // AEAD is supported
             break;
         }
     return ok;
@@ -509,12 +512,6 @@ static int akifascon128_set_ctx_params(void *vctx, const OSSL_PARAM params[])
     struct akif_ascon_ctx_st *ctx = vctx;
     const OSSL_PARAM *p;
     int ok = 1;
-
-    // #if 0
-    // if (ctx->is_ongoing) {
-    //    ERR_raise(ERR_HANDLE(ctx), ASCON_ONGOING_OPERATION);
-    //   return 0;
-    //}
 
     for (p = params; p->key != NULL; p++)
         switch (akif_ascon_params_parse(p->key))
