@@ -6,6 +6,7 @@
     PARAM_keylen          => "keylen",
     PARAM_noncelen        => "ivlen",
     PARAM_tag             => "tag",
+    PARAM_taglen          => "taglen",
     PARAM_aead            => "aead",
     # Provider params
     PARAM_version         => "version",

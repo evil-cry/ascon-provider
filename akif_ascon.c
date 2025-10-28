@@ -1,3 +1,15 @@
+/*
+Okay it looks like we have a good AEAD implementation but does the current provider support Ascon-Hash256 or Ascon-XOF128? Also from our previous conversations I derived this as our list of to-dos. Have we covered all of these?
+
+1. Implement dupctx function
+2. Implement ascon_aead128_assoc_data_update
+3. Implement missing cipher_get_iv_length
+4. Implement missing cipher_get_tag_length
+5. Add support for other OSSL_PARAM types
+6. Implement AEAD parameter handling 
+7. Add cipher mode support
+*/
+
 /* CC0 license applied, see LICENCE.md */
 
 #include <stdlib.h>
@@ -6,6 +18,7 @@
 
 #include <openssl/core.h>
 #include <openssl/core_dispatch.h>
+#include <openssl/core_names.h>
 
 #include "prov/err.h"
 #include "prov/num.h"
@@ -146,11 +159,13 @@ struct akif_ascon_ctx_st
     struct provider_ctx_st *provctx;
 
     uint8_t tag[FIXED_TAG_LENGTH]; // storing the tag with fixed length
-    bool is_tag_set;               // wether a tag has been computed or set
+    bool is_tag_set;               // whether a tag has been computed or set
 
     direction_t direction;  /* either encryption or decryption */
     bool is_ongoing;        /* true = operation has started */
     intctx_t *internal_ctx; /* a handle for the implementation internal context*/
+    bool assoc_data_processed;  /* whether associated data has been processed */
+    size_t tag_len;          /* tag length being used */
 };
 #define ERR_HANDLE(ctx) ((ctx)->provctx->proverr_handle)
 
@@ -164,6 +179,8 @@ static void *akifascon128_newctx(void *vprovctx)
         ctx->provctx = vprovctx;
         ctx->is_tag_set = false;
         ctx->is_ongoing = false;
+        ctx->assoc_data_processed = false;
+        ctx->tag_len = FIXED_TAG_LENGTH;  /* default tag length */
 
         intctx_t *intctx = calloc(1, sizeof(*intctx));
         if (intctx != NULL)
@@ -185,6 +202,8 @@ static void akifascon128_cleanctx(void *vctx)
 
     ctx->is_tag_set = false;
     ctx->is_ongoing = false;
+    ctx->assoc_data_processed = false;
+    ctx->tag_len = FIXED_TAG_LENGTH;
     memset(ctx->internal_ctx, 0, sizeof(*(ctx->internal_ctx)));
     memset(ctx->tag, 0, sizeof(ctx->tag));
 }
@@ -205,6 +224,8 @@ static void *akifascon128_dupctx(void *vctx)
     dst->direction = src->direction;
     dst->is_ongoing = src->is_ongoing;
     dst->is_tag_set = src->is_tag_set;
+    dst->assoc_data_processed = src->assoc_data_processed;
+    dst->tag_len = src->tag_len;
 
     // Copy tag if it's set
     if (src->is_tag_set) {
@@ -437,10 +458,11 @@ static int akifascon128_get_params(OSSL_PARAM params[])
 static const OSSL_PARAM *akifascon128_gettable_ctx_params(void *cctx, void *provctx)
 {
     static const OSSL_PARAM table[] = {
-        {S_PARAM_keylen, OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0},
-        {S_PARAM_noncelen, OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0},
-        {S_PARAM_tag, OSSL_PARAM_OCTET_STRING, NULL, FIXED_TAG_LENGTH, 0},
-        {NULL, 0, NULL, 0, 0},
+        OSSL_PARAM_size_t(OSSL_CIPHER_PARAM_KEYLEN, NULL),
+        OSSL_PARAM_size_t(OSSL_CIPHER_PARAM_IVLEN, NULL),
+        OSSL_PARAM_size_t(OSSL_CIPHER_PARAM_AEAD_TAGLEN, NULL),
+        OSSL_PARAM_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG, NULL, 0, NULL),
+        OSSL_PARAM_END,
     };
 
     return table;
@@ -457,8 +479,14 @@ static int akifascon128_get_ctx_params(void *vctx, OSSL_PARAM params[])
     for (p = params; p->key != NULL; p++)
         switch (akif_ascon_params_parse(p->key))
         {
+        case V_PARAM_keylen:
+            ok &= provnum_set_size_t(p, ASCON_AEAD128_KEY_LEN) >= 0;
+            break;
         case V_PARAM_noncelen:
             ok &= provnum_set_size_t(p, ASCON_AEAD_NONCE_LEN) >= 0;
+            break;
+        case V_PARAM_taglen:
+            ok &= provnum_set_size_t(p, ctx->tag_len) >= 0;
             break;
         case V_PARAM_tag:
             // check if p->data_type matches "octect string"
@@ -500,8 +528,9 @@ static int akifascon128_get_ctx_params(void *vctx, OSSL_PARAM params[])
 static const OSSL_PARAM *akifascon128_settable_ctx_params(void *cctx, void *provctx)
 {
     static const OSSL_PARAM table[] = {
-        {S_PARAM_tag, OSSL_PARAM_OCTET_STRING, NULL, FIXED_TAG_LENGTH, 0},
-        {NULL, 0, NULL, 0, 0},
+        OSSL_PARAM_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG, NULL, 0, NULL),
+        OSSL_PARAM_size_t(OSSL_CIPHER_PARAM_AEAD_TAGLEN, NULL),
+        OSSL_PARAM_END,
     };
 
     return table;
@@ -516,6 +545,24 @@ static int akifascon128_set_ctx_params(void *vctx, const OSSL_PARAM params[])
     for (p = params; p->key != NULL; p++)
         switch (akif_ascon_params_parse(p->key))
         {
+        case V_PARAM_taglen:
+        {
+            size_t tag_len = 0;
+            if (!provnum_get_size_t(p, &tag_len))
+            {
+                ok = 0;
+                break;
+            }
+            if (tag_len != FIXED_TAG_LENGTH)
+            {
+                ERR_raise(ERR_HANDLE(ctx), ASCON_ONLY_FIXED_TAG_LENGTH_SUPPORTED);
+                ok = 0;
+                break;
+            }
+            ctx->tag_len = tag_len;
+            ok = 1;
+        }
+        break;
         case V_PARAM_tag:
         {
             if (p->data == NULL || p->data_type != OSSL_PARAM_OCTET_STRING)
