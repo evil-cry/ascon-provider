@@ -1,15 +1,3 @@
-/*
-Okay it looks like we have a good AEAD implementation but does the current provider support Ascon-Hash256 or Ascon-XOF128? Also from our previous conversations I derived this as our list of to-dos. Have we covered all of these?
-
-1. Implement dupctx function
-2. Implement ascon_aead128_assoc_data_update
-3. Implement missing cipher_get_iv_length
-4. Implement missing cipher_get_tag_length
-5. Add support for other OSSL_PARAM types
-6. Implement AEAD parameter handling 
-7. Add cipher mode support
-*/
-
 /* CC0 license applied, see LICENCE.md */
 
 #include <stdlib.h>
