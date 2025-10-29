@@ -25,7 +25,16 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/akif_ascon_params.c
                    MAIN_DEPENDENCY akif_ascon_params.dat
                    DEPENDS libprov/perl/gen_param_LL.pl)
 
-set(akif_ascon_source akif_ascon.c ${CMAKE_CURRENT_BINARY_DIR}/akif_ascon_params.c)
+set(akif_ascon_source 
+    akif_ascon.c
+    akif_ascon_common.c
+    akif_ascon_aead128.c
+    akif_ascon_aead128a.c
+    akif_ascon_aead80pq.c
+    akif_ascon_digest_hash.c
+    akif_ascon_digest_xof.c
+    ${CMAKE_CURRENT_BINARY_DIR}/akif_ascon_params.c
+)
 build_provider(akif_ascon "${akif_ascon_source}" libprov)
 target_link_libraries(akif_ascon PRIVATE ascon128)
 target_include_directories(akif_ascon PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/)
