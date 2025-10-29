@@ -597,7 +597,10 @@ static const OSSL_DISPATCH akifascon128_functions[] = {
     {OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS, (funcptr_t)akifascon128_gettable_ctx_params},
     {OSSL_FUNC_CIPHER_SET_CTX_PARAMS, (funcptr_t)akifascon128_set_ctx_params},
     {OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS, (funcptr_t)akifascon128_settable_ctx_params},
-    {0, NULL}};
+    { OSSL_FUNC_CIPHER_GET_IV_LENGTH,  (void (*)(void))ascon_cipher_get_iv_length },
+    { OSSL_FUNC_CIPHER_GET_TAG_LENGTH, (void (*)(void))ascon_cipher_get_tag_length },
+    {0, NULL}
+    };
 
 /* The table of ciphers this provider offers */
 static const OSSL_ALGORITHM akif_ascon_ciphers[] = {
@@ -678,4 +681,18 @@ int OSSL_provider_init(const OSSL_CORE_HANDLE *core,
         return 0;
     *out = provider_functions;
     return OSSL_RV_SUCCESS;
+}
+/* Added by Jack Barsa */
+/* These helper functions tell OpenSSL the IV and tag sizes for Ascon AEAD */
+
+static size_t ascon_cipher_get_iv_length(void *vctx)
+{
+    /* Ascon uses a 128-bit (16-byte) IV */
+    return 16;
+}
+
+static size_t ascon_cipher_get_tag_length(void *vctx)
+{
+    /* Ascon authentication tag is also 16 bytes (128 bits) */
+    return 16;
 }
