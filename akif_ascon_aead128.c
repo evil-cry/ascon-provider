@@ -22,6 +22,8 @@ OSSL_FUNC_cipher_set_ctx_params_fn akifascon128_set_ctx_params;
 OSSL_FUNC_cipher_get_ctx_params_fn akifascon128_get_ctx_params;
 OSSL_FUNC_cipher_settable_ctx_params_fn akifascon128_settable_ctx_params;
 OSSL_FUNC_cipher_gettable_ctx_params_fn akifascon128_gettable_ctx_params;
+OSSL_FUNC_cipher_get_iv_length_fn akifascon128_get_iv_length;
+OSSL_FUNC_cipher_get_tag_length_fn akifascon128_get_tag_length;
 
 #define DEFAULT_KEYLENGTH 16 /* amount of bytes == 128 bits */
 #define BLOCKSIZE 1          /* amount of bytes */
@@ -460,6 +462,21 @@ int akifascon128_set_ctx_params(void *vctx, const OSSL_PARAM params[])
     return ok;
 }
 
+/* Added by Jack Barsa */
+/* These helper functions tell OpenSSL the IV and tag sizes for Ascon AEAD */
+
+size_t akifascon128_get_iv_length(void *vctx)
+{
+    /* Ascon uses a 128-bit (16-byte) IV */
+    return ASCON_AEAD_NONCE_LEN;
+}
+
+size_t akifascon128_get_tag_length(void *vctx)
+{
+    /* Ascon authentication tag is also 16 bytes (128 bits) */
+    return FIXED_TAG_LENGTH;
+}
+
 /*********************************************************************
  *
  *  Setup
@@ -483,4 +500,6 @@ const OSSL_DISPATCH akifascon128_functions[] = {
     {OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS, (funcptr_t)akifascon128_gettable_ctx_params},
     {OSSL_FUNC_CIPHER_SET_CTX_PARAMS, (funcptr_t)akifascon128_set_ctx_params},
     {OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS, (funcptr_t)akifascon128_settable_ctx_params},
+    {OSSL_FUNC_CIPHER_GET_IV_LENGTH, (funcptr_t)akifascon128_get_iv_length},
+    {OSSL_FUNC_CIPHER_GET_TAG_LENGTH, (funcptr_t)akifascon128_get_tag_length},
     {0, NULL}};

@@ -32,6 +32,8 @@ int akifascon128_set_ctx_params(void *vctx, const OSSL_PARAM params[]);
 int akifascon128_get_ctx_params(void *vctx, OSSL_PARAM params[]);
 const OSSL_PARAM *akifascon128_settable_ctx_params(void *cctx, void *provctx);
 const OSSL_PARAM *akifascon128_gettable_ctx_params(void *cctx, void *provctx);
+size_t akifascon128_get_iv_length(void *vctx);
+size_t akifascon128_get_tag_length(void *vctx);
 
 /* Dispatch table for ASCON-128 */
 extern const OSSL_DISPATCH akifascon128_functions[];
