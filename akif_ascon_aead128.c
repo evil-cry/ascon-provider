@@ -1,7 +1,6 @@
 ﻿/* CC0 license applied, see LICENCE.md */
 
 #include "akif_ascon_aead128.h"
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -25,29 +24,11 @@ OSSL_FUNC_cipher_gettable_ctx_params_fn akifascon128_gettable_ctx_params;
 OSSL_FUNC_cipher_get_iv_length_fn akifascon128_get_iv_length;
 OSSL_FUNC_cipher_get_tag_length_fn akifascon128_get_tag_length;
 
-#define DEFAULT_KEYLENGTH 16 /* amount of bytes == 128 bits */
-#define BLOCKSIZE 1          /* amount of bytes */
-
-/* Helper function to determine the key length */
-static size_t keylen()
-{
-    /*
-     * Give the user a chance to decide a default.
-     * With 'openssl enc', this is the only viable way for the user
-     * to set an arbitrary key length.
-     * Note that the length is expressed in bytes.
-     */
-    const char *user_keyl = getenv("ASCON_KEYLEN");
-    size_t keyl = DEFAULT_KEYLENGTH;
-
-    if (user_keyl != NULL)
-        keyl = strtoul(user_keyl, NULL, 0);
-    return keyl;
-}
+/* ASCON-128 uses a fixed key length of 16 bytes (128 bits) */
 
 static void akifascon128_cleanctx(void *vctx)
 {
-    struct akif_ascon_ctx_st *ctx = vctx;
+    struct ascon_ctx_st *ctx = vctx;
 
     ctx->is_tag_set = false;
     ctx->is_ongoing = false;
@@ -86,29 +67,29 @@ void *akifascon128_newctx(void *vprovctx)
 
 void *akifascon128_dupctx(void *vctx)
 {
-    struct akif_ascon_ctx_st *src = vctx;
-    struct akif_ascon_ctx_st *dst = NULL;
+    struct ascon_ctx_st *src = vctx;
+    struct ascon_ctx_st *dst = NULL;
 
     if (src == NULL)
         return NULL;
 
-    // Create new context using the same provider context
+    /* Create new context using the same provider context */
     if ((dst = akifascon128_newctx(src->provctx)) == NULL)
         return NULL;
 
-    // Copy all context fields
+    /* Copy all context fields */
     dst->direction = src->direction;
     dst->is_ongoing = src->is_ongoing;
     dst->is_tag_set = src->is_tag_set;
     dst->assoc_data_processed = src->assoc_data_processed;
     dst->tag_len = src->tag_len;
 
-    // Copy tag if it's set
+    /* Copy tag if it's set */
     if (src->is_tag_set) {
         memcpy(dst->tag, src->tag, FIXED_TAG_LENGTH);
     }
 
-    // Deep copy the internal LibAscon context
+    /* Deep copy the internal LibAscon context */
     if (src->internal_ctx != NULL && dst->internal_ctx != NULL) {
         memcpy(dst->internal_ctx, src->internal_ctx, sizeof(*dst->internal_ctx));
     }
@@ -118,7 +99,7 @@ void *akifascon128_dupctx(void *vctx)
 
 void akifascon128_freectx(void *vctx)
 {
-    struct akif_ascon_ctx_st *ctx = vctx;
+    struct ascon_ctx_st *ctx = vctx;
 
     if (ctx == NULL)
         return;
@@ -129,16 +110,20 @@ void akifascon128_freectx(void *vctx)
     free(ctx);
 }
 
-/* MY INTERNAL INIT FUNCTION (glue) */
+/* Internal initialization function (shared by encrypt and decrypt init) */
 
 static int akifascon128_internal_init(void *vctx, direction_t direction,
                                       const unsigned char *key, size_t keylen,
                                       const unsigned char *nonce, size_t noncelen,
                                       const OSSL_PARAM params[])
 {
-    struct akif_ascon_ctx_st *ctx = vctx;
+    struct ascon_ctx_st *ctx = vctx;
 
-    assert(ctx != NULL);
+    if (ctx == NULL)
+    {
+        return OSSL_RV_ERROR;
+    }
+
     akifascon128_cleanctx(ctx);
 
     if (nonce != NULL)
@@ -154,7 +139,6 @@ static int akifascon128_internal_init(void *vctx, direction_t direction,
 
     if (key != NULL && nonce != NULL)
     {
-
         ascon_aead128_init(ctx->internal_ctx, key, nonce);
         ctx->is_ongoing = true;
         return OSSL_RV_SUCCESS;
@@ -175,32 +159,36 @@ int akifascon128_decrypt_init(void *vctx,
                               const unsigned char *nonce, size_t noncelen,
                               const OSSL_PARAM params[])
 {
-
     return akifascon128_internal_init(vctx, DECRYPTION, key, keylen, nonce, noncelen, params);
 }
 
 int akifascon128_update(void *vctx, unsigned char *out, size_t *outl,
                         size_t outsize, const unsigned char *in, size_t inl)
 {
-
-    struct akif_ascon_ctx_st *ctx = vctx;
+    struct ascon_ctx_st *ctx = vctx;
 
     if (ctx == NULL)
     {
-        // handling the error
-        ERR_raise(ERR_HANDLE(ctx), ASCON_NO_CTX_SET);
+        /* Context must be set before update */
         return OSSL_RV_ERROR;
     }
 
     if (ctx->is_ongoing == false)
     {
-        // handling the error
         ERR_raise(ERR_HANDLE(ctx), ASCON_NO_ONGOING_OPERATION);
         return OSSL_RV_ERROR;
     }
 
     if (ctx->direction == ENCRYPTION)
     {
+        /* Mark that we've started encryption - AAD cannot be added after this */
+        if (!ctx->assoc_data_processed)
+        {
+            /* Finalize AAD processing if any was provided (LibAscon handles this internally) */
+            /* The LibAscon encrypt_update will finalize AAD automatically if needed */
+            ctx->assoc_data_processed = true;
+        }
+
         const uint8_t *plaintext = in;
         size_t plaintext_len = inl;
         uint8_t *ciphertext = out;
@@ -210,10 +198,16 @@ int akifascon128_update(void *vctx, unsigned char *out, size_t *outl,
         *outl = ciphertext_len;
         return OSSL_RV_SUCCESS;
     }
-
     else if (ctx->direction == DECRYPTION)
-
     {
+        /* Mark that we've started decryption - AAD cannot be added after this */
+        if (!ctx->assoc_data_processed)
+        {
+            /* Finalize AAD processing if any was provided (LibAscon handles this internally) */
+            /* The LibAscon decrypt_update will finalize AAD automatically if needed */
+            ctx->assoc_data_processed = true;
+        }
+
         uint8_t *plaintext = out;
         size_t plaintext_len;
         const uint8_t *ciphertext = in;
@@ -230,12 +224,11 @@ int akifascon128_update(void *vctx, unsigned char *out, size_t *outl,
 
 int akifascon128_final(void *vctx, unsigned char *out, size_t *outl, size_t outsize)
 {
-
-    struct akif_ascon_ctx_st *ctx = vctx;
+    struct ascon_ctx_st *ctx = vctx;
 
     if (ctx == NULL)
     {
-        ERR_raise(ERR_HANDLE(ctx), ASCON_NO_CTX_SET);
+        /* Context must be set before final */
         return OSSL_RV_ERROR;
     }
 
@@ -313,7 +306,7 @@ int akifascon128_get_params(OSSL_PARAM params[])
     int ok = 1;
 
     for (p = params; p->key != NULL; p++)
-        switch (akif_ascon_params_parse(p->key))
+        switch (ascon_params_parse(p->key))
         {
         case V_PARAM_blocksize:
             ok &= provnum_set_size_t(p, 1) >= 0;
@@ -346,14 +339,17 @@ const OSSL_PARAM *akifascon128_gettable_ctx_params(void *cctx, void *provctx)
 
 int akifascon128_get_ctx_params(void *vctx, OSSL_PARAM params[])
 {
-    struct akif_ascon_ctx_st *ctx = vctx;
+    struct ascon_ctx_st *ctx = vctx;
+    OSSL_PARAM *p;
     int ok = 1;
 
-#if 1
-    OSSL_PARAM *p;
+    if (ctx == NULL)
+    {
+        return 0;
+    }
 
     for (p = params; p->key != NULL; p++)
-        switch (akif_ascon_params_parse(p->key))
+        switch (ascon_params_parse(p->key))
         {
         case V_PARAM_keylen:
             ok &= provnum_set_size_t(p, ASCON_AEAD128_KEY_LEN) >= 0;
@@ -365,29 +361,29 @@ int akifascon128_get_ctx_params(void *vctx, OSSL_PARAM params[])
             ok &= provnum_set_size_t(p, ctx->tag_len) >= 0;
             break;
         case V_PARAM_tag:
-            // check if p->data_type matches "octect string"
-            // check that p->data (the given buffer) is not NULL
+            /* Check that p->data_type matches "octet string" */
+            /* Check that p->data (the given buffer) is not NULL */
             if (p->data == NULL || p->data_type != OSSL_PARAM_OCTET_STRING)
             {
                 ok = 0;
                 break;
             }
 
-            // Check if the given buffer is big enough (p->data_size is big enough?)
+            /* Check if the given buffer is big enough */
             if (p->data_size < FIXED_TAG_LENGTH)
             {
                 ok = 0;
                 break;
             }
 
-            // Check if ctx->is_tag_set is true
+            /* Check if ctx->is_tag_set is true */
             if (!ctx->is_tag_set)
             {
                 ERR_raise(ERR_HANDLE(ctx), ASCON_NO_TAG_SET);
                 ok = 0;
                 break;
             }
-            // copy tag to destination
+            /* Copy tag to destination */
             memcpy(p->data, ctx->tag, FIXED_TAG_LENGTH);
             p->return_size = FIXED_TAG_LENGTH;
             ok &= 1;
@@ -395,15 +391,13 @@ int akifascon128_get_ctx_params(void *vctx, OSSL_PARAM params[])
         }
 
     return ok;
-#else
-    return !ok;
-#endif
 }
 
 /* Parameters that libcrypto can send to this implementation */
 const OSSL_PARAM *akifascon128_settable_ctx_params(void *cctx, void *provctx)
 {
     static const OSSL_PARAM table[] = {
+        {OSSL_CIPHER_PARAM_AEAD_AAD, OSSL_PARAM_OCTET_STRING, NULL, 0, 0},
         {OSSL_CIPHER_PARAM_AEAD_TAG, OSSL_PARAM_OCTET_STRING, NULL, 0, 0},
         {OSSL_CIPHER_PARAM_AEAD_TAGLEN, OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0},
         {NULL, 0, NULL, 0, 0},
@@ -414,13 +408,62 @@ const OSSL_PARAM *akifascon128_settable_ctx_params(void *cctx, void *provctx)
 
 int akifascon128_set_ctx_params(void *vctx, const OSSL_PARAM params[])
 {
-    struct akif_ascon_ctx_st *ctx = vctx;
+    struct ascon_ctx_st *ctx = vctx;
     const OSSL_PARAM *p;
     int ok = 1;
 
+    if (ctx == NULL)
+    {
+        return 0;
+    }
+
     for (p = params; p->key != NULL; p++)
-        switch (akif_ascon_params_parse(p->key))
+        switch (ascon_params_parse(p->key))
         {
+        case V_PARAM_aad:
+        {
+            /* Process associated data (AAD) before encryption/decryption */
+            if (!ctx->is_ongoing)
+            {
+                /* Must have initialized with key and nonce first */
+                ok = 0;
+                break;
+            }
+
+            /* Can only add AAD before encryption/decryption updates start */
+            if (ctx->assoc_data_processed)
+            {
+                /* AAD already processed or encryption started - cannot add more */
+                ERR_raise(ERR_HANDLE(ctx), ASCON_ONGOING_OPERATION);
+                ok = 0;
+                break;
+            }
+
+            /* Process AAD if provided */
+            if (p->data != NULL && p->data_type == OSSL_PARAM_OCTET_STRING && p->data_size > 0)
+            {
+                ascon_aead128_assoc_data_update(ctx->internal_ctx, p->data, p->data_size);
+            }
+            else if (p->data_size == 0)
+            {
+                /* Empty AAD is allowed */
+                /* LibAscon allows calling with NULL data and 0 length */
+                if (p->data == NULL || p->data_type == OSSL_PARAM_OCTET_STRING)
+                {
+                    /* Empty AAD - still valid, no-op */
+                    ok = 1;
+                }
+                else
+                {
+                    ok = 0;
+                }
+            }
+            else
+            {
+                ok = 0;
+            }
+        }
+        break;
         case V_PARAM_taglen:
         {
             size_t tag_len = 0;
@@ -447,7 +490,7 @@ int akifascon128_set_ctx_params(void *vctx, const OSSL_PARAM params[])
                 break;
             }
 
-            // We only accept stricyl 16B tags here
+            /* We only accept strictly 16-byte tags here */
             if (p->data_size != FIXED_TAG_LENGTH)
             {
                 ERR_raise(ERR_HANDLE(ctx), ASCON_ONLY_FIXED_TAG_LENGTH_SUPPORTED);
@@ -458,11 +501,9 @@ int akifascon128_set_ctx_params(void *vctx, const OSSL_PARAM params[])
             ctx->is_tag_set = 1;
         }
         }
-    // #endif
     return ok;
 }
 
-/* Added by Jack Barsa */
 /* These helper functions tell OpenSSL the IV and tag sizes for Ascon AEAD */
 
 size_t akifascon128_get_iv_length(void *vctx)
@@ -485,7 +526,7 @@ size_t akifascon128_get_tag_length(void *vctx)
 
 typedef void (*funcptr_t)(void);
 
-/* The Akif-Ascon dispatch table */
+/* The dispatch table for ASCON-128 */
 const OSSL_DISPATCH akifascon128_functions[] = {
     {OSSL_FUNC_CIPHER_NEWCTX, (funcptr_t)akifascon128_newctx},
     {OSSL_FUNC_CIPHER_ENCRYPT_INIT, (funcptr_t)akifascon128_encrypt_init},

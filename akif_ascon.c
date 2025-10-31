@@ -8,9 +8,9 @@
  * Forward declarations to ensure we get signatures right.  All the
  * OSSL_FUNC_* types come from <openssl/core_dispatch.h>
  */
-static OSSL_FUNC_provider_query_operation_fn akif_ascon_prov_operation;
-static OSSL_FUNC_provider_get_params_fn akif_ascon_prov_get_params;
-static OSSL_FUNC_provider_get_reason_strings_fn akif_ascon_prov_get_reason_strings;
+static OSSL_FUNC_provider_query_operation_fn ascon_prov_operation;
+static OSSL_FUNC_provider_get_params_fn ascon_prov_get_params;
+static OSSL_FUNC_provider_get_reason_strings_fn ascon_prov_get_reason_strings;
 
 /*********************************************************************
  *
@@ -19,12 +19,12 @@ static OSSL_FUNC_provider_get_reason_strings_fn akif_ascon_prov_get_reason_strin
  *****/
 
 /* The table of ciphers this provider offers */
-static const OSSL_ALGORITHM akif_ascon_ciphers[] = {
-    {"akifascon128", "x.author='" AUTHOR "'", akifascon128_functions},
+static const OSSL_ALGORITHM ascon_ciphers[] = {
+    {"ascon128", "x.author='" AUTHOR "'", akifascon128_functions},
     {NULL, NULL, NULL}};
 
 /* The function that returns the appropriate algorithm table per operation */
-static const OSSL_ALGORITHM *akif_ascon_prov_operation(void *vprovctx,
+static const OSSL_ALGORITHM *ascon_prov_operation(void *vprovctx,
                                                        int operation_id,
                                                        int *no_cache)
 {
@@ -32,23 +32,23 @@ static const OSSL_ALGORITHM *akif_ascon_prov_operation(void *vprovctx,
     switch (operation_id)
     {
     case OSSL_OP_CIPHER:
-        return akif_ascon_ciphers;
+        return ascon_ciphers;
     }
     return NULL;
 }
 
-static const OSSL_ITEM *akif_ascon_prov_get_reason_strings(void *provctx)
+static const OSSL_ITEM *ascon_prov_get_reason_strings(void *provctx)
 {
     return reason_strings;
 }
 
-static int akif_ascon_prov_get_params(void *provctx, OSSL_PARAM *params)
+static int ascon_prov_get_params(void *provctx, OSSL_PARAM *params)
 {
     OSSL_PARAM *p;
     int ok = 1;
 
     for (p = params; p->key != NULL; p++)
-        switch (akif_ascon_params_parse(p->key))
+        switch (ascon_params_parse(p->key))
         {
         case V_PARAM_version:
             *(const void **)p->data = VERSION;
@@ -73,7 +73,7 @@ static int akif_ascon_prov_get_params(void *provctx, OSSL_PARAM *params)
 }
 
 /* The function that tears down this provider */
-static void akif_ascon_prov_teardown(void *vprovctx)
+static void ascon_prov_teardown(void *vprovctx)
 {
     provider_ctx_free(vprovctx);
 }
@@ -82,12 +82,12 @@ typedef void (*funcptr_t)(void);
 
 /* The base dispatch table */
 static const OSSL_DISPATCH provider_functions[] = {
-    {OSSL_FUNC_PROVIDER_TEARDOWN, (funcptr_t)akif_ascon_prov_teardown},
-    {OSSL_FUNC_PROVIDER_QUERY_OPERATION, (funcptr_t)akif_ascon_prov_operation},
+    {OSSL_FUNC_PROVIDER_TEARDOWN, (funcptr_t)ascon_prov_teardown},
+    {OSSL_FUNC_PROVIDER_QUERY_OPERATION, (funcptr_t)ascon_prov_operation},
     {OSSL_FUNC_PROVIDER_GET_REASON_STRINGS,
-     (funcptr_t)akif_ascon_prov_get_reason_strings},
+     (funcptr_t)ascon_prov_get_reason_strings},
     {OSSL_FUNC_PROVIDER_GET_PARAMS,
-     (funcptr_t)akif_ascon_prov_get_params},
+     (funcptr_t)ascon_prov_get_params},
     {0, NULL}};
 
 int OSSL_provider_init(const OSSL_CORE_HANDLE *core,

@@ -1,7 +1,7 @@
 /* CC0 license applied, see LICENCE.md */
 
-#ifndef AKIF_ASCON_COMMON_H
-#define AKIF_ASCON_COMMON_H
+#ifndef ASCON_COMMON_H
+#define ASCON_COMMON_H
 
 #include <stdlib.h>
 #include <string.h>
@@ -70,5 +70,5 @@ int OSSL_provider_init(const OSSL_CORE_HANDLE *core,
                        const OSSL_DISPATCH **out,
                        void **provctx);
 
-#endif /* AKIF_ASCON_COMMON_H */
+#endif /* ASCON_COMMON_H */
 

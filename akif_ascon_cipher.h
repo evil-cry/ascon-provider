@@ -1,7 +1,7 @@
 /* CC0 license applied, see LICENCE.md */
 
-#ifndef AKIF_ASCON_CIPHER_H
-#define AKIF_ASCON_CIPHER_H
+#ifndef ASCON_CIPHER_H
+#define ASCON_CIPHER_H
 
 #include "akif_ascon_common.h"
 
@@ -20,7 +20,7 @@ typedef enum direction_et
 typedef ascon_aead_ctx_t intctx_t;
 
 /* Base structure for AEAD cipher contexts */
-struct akif_ascon_ctx_st
+struct ascon_ctx_st
 {
     struct provider_ctx_st *provctx;
 
@@ -37,6 +37,6 @@ struct akif_ascon_ctx_st
 /* Macro to access error handle from cipher context */
 #define ERR_HANDLE(ctx) ((ctx)->provctx->proverr_handle)
 
-#endif /* AKIF_ASCON_CIPHER_H */
+#endif /* ASCON_CIPHER_H */
 
 

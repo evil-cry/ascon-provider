@@ -1,7 +1,7 @@
 /* CC0 license applied, see LICENCE.md */
 
-#ifndef AKIF_ASCON_AEAD128_H
-#define AKIF_ASCON_AEAD128_H
+#ifndef ASCON_AEAD128_H
+#define ASCON_AEAD128_H
 
 #include "akif_ascon_cipher.h"
 
@@ -38,4 +38,4 @@ size_t akifascon128_get_tag_length(void *vctx);
 /* Dispatch table for ASCON-128 */
 extern const OSSL_DISPATCH akifascon128_functions[];
 
-#endif /* AKIF_ASCON_AEAD128_H */
+#endif /* ASCON_AEAD128_H */
