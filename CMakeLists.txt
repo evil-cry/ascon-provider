@@ -35,22 +35,26 @@ set(akif_ascon_source
     akif_ascon_digest_xof.c
     ${CMAKE_CURRENT_BINARY_DIR}/akif_ascon_params.c
 )
-build_provider(akif_ascon "${akif_ascon_source}" libprov)
-target_link_libraries(akif_ascon PRIVATE ascon128)
-target_include_directories(akif_ascon PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/)
+# Build provider with unique target name but output file as "ascon"
+# (LibAscon already has a target named "ascon", so we use "ascon_provider" for the target)
+build_provider(ascon_provider "${akif_ascon_source}" libprov)
+# Override output name to "ascon" to match OpenSSL provider naming conventions
+set_target_properties(ascon_provider PROPERTIES OUTPUT_NAME "ascon")
+target_link_libraries(ascon_provider PRIVATE ascon128)
+target_include_directories(ascon_provider PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/)
 
 # Testing
 get_property(_is_multiconfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if (_is_multiconfig)
-  set(AKIF_ASCON_MODULE_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>")
+  set(ASCON_MODULE_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>")
 else()
-  set(AKIF_ASCON_MODULE_DIRECTORY "${CMAKE_BINARY_DIR}")
+  set(ASCON_MODULE_DIRECTORY "${CMAKE_BINARY_DIR}")
 endif()
 unset(_is_multiconfig)
-message(STATUS "Determined the build time Akif_Ascon provider location to be '${AKIF_ASCON_MODULE_DIRECTORY}'")
+message(STATUS "Determined the build time Ascon provider location to be '${ASCON_MODULE_DIRECTORY}'")
 
 set(TEST_ENVIRONMENT
-  "OPENSSL_MODULES=${AKIF_ASCON_MODULE_DIRECTORY}"
+  "OPENSSL_MODULES=${ASCON_MODULE_DIRECTORY}"
   "OPENSSL_PROGRAM=${OPENSSL_PROGRAM}"
   "OPENSSL_RUNTIME_DIR=${OPENSSL_RUNTIME_DIR}"
   "OPENSSL_LIBRARY_DIR=$<IF:$<BOOL:${WIN32}>,${OPENSSL_RUNTIME_DIR},${OPENSSL_LIBRARY_DIR}>"
@@ -90,12 +94,12 @@ if(EXTRA_TESTS)
           TARGET test_akif_ascon POST_BUILD
           COMMAND cmake -E copy
             "${OPENSSL_LIBCRYPTO_SHARED}"
-            "${AKIF_ASCON_MODULE_DIRECTORY}/${OPENSSL_LIBCRYPTO_SHARED_NAME}.dll")
+            "${ASCON_MODULE_DIRECTORY}/${OPENSSL_LIBCRYPTO_SHARED_NAME}.dll")
         add_custom_command(
           TARGET test_akif_ascon_err POST_BUILD
           COMMAND cmake -E copy
             "${OPENSSL_LIBCRYPTO_SHARED}"
-            "${AKIF_ASCON_MODULE_DIRECTORY}/${OPENSSL_LIBCRYPTO_SHARED_NAME}.dll")
+            "${ASCON_MODULE_DIRECTORY}/${OPENSSL_LIBCRYPTO_SHARED_NAME}.dll")
       endif()
     endif()
 
@@ -113,5 +117,5 @@ if(EXTRA_TESTS)
 endif(EXTRA_TESTS)
 
 # No installation instruction, as this should never be used in production
-# If you still want to do so, just copy akif_ascon.so / akif_ascon.dll to an
+# If you still want to do so, just copy ascon.so / ascon.dll to an
 # appropriate location.

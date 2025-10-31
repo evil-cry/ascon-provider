@@ -4,6 +4,6 @@ use Test2::V0;
 
 plan(1);
 
-like(`openssl list -provider akif_ascon -cipher-algorithms`,
-     qr/akifascon128 \@ akif_ascon\n/,
-     'akifascon128 is listed');
+like(`openssl list -provider ascon -cipher-algorithms`,
+     qr/ascon128 \@ ascon\n/,
+     'ascon128 is listed');

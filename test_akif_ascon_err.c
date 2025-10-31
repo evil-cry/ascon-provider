@@ -18,8 +18,8 @@ static const unsigned char key[] =
 static unsigned char ciphertext[sizeof(plaintext)];
 static unsigned char plaintext2[sizeof(plaintext)];
 
-#define PROVIDER_NAME "akif_ascon"
-#define CIPHER_NAME "akifascon128"
+#define PROVIDER_NAME "ascon"
+#define CIPHER_NAME "ascon128"
 
 int main()
 {

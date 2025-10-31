@@ -1,8 +1,14 @@
 ﻿/* CC0 license applied, see LICENCE.md */
 
 #include "akif_ascon_aead128.h"
+#include "akif_ascon_cipher.h"  /* Ensure struct ascon_ctx_st is visible */
 #include <stdlib.h>
 #include <string.h>
+
+/* Compatibility: OSSL_CIPHER_PARAM_AEAD_AAD may not be defined in all OpenSSL versions */
+#ifndef OSSL_CIPHER_PARAM_AEAD_AAD
+#define OSSL_CIPHER_PARAM_AEAD_AAD "aad"
+#endif
 
 /*
  * Forward declarations to ensure we get signatures right.  All the
@@ -21,8 +27,11 @@ OSSL_FUNC_cipher_set_ctx_params_fn akifascon128_set_ctx_params;
 OSSL_FUNC_cipher_get_ctx_params_fn akifascon128_get_ctx_params;
 OSSL_FUNC_cipher_settable_ctx_params_fn akifascon128_settable_ctx_params;
 OSSL_FUNC_cipher_gettable_ctx_params_fn akifascon128_gettable_ctx_params;
-OSSL_FUNC_cipher_get_iv_length_fn akifascon128_get_iv_length;
-OSSL_FUNC_cipher_get_tag_length_fn akifascon128_get_tag_length;
+
+/* Note: get_iv_length and get_tag_length are not standard OpenSSL dispatch functions.
+ * IV and tag lengths are retrieved via get_ctx_params instead.
+ * These functions are kept for internal use only.
+ */
 
 /* ASCON-128 uses a fixed key length of 16 bytes (128 bits) */
 
@@ -40,7 +49,7 @@ static void akifascon128_cleanctx(void *vctx)
 
 void *akifascon128_newctx(void *vprovctx)
 {
-    struct akif_ascon_ctx_st *ctx = malloc(sizeof(*ctx));
+    struct ascon_ctx_st *ctx = malloc(sizeof(*ctx));
 
     if (ctx != NULL)
     {
@@ -541,6 +550,4 @@ const OSSL_DISPATCH akifascon128_functions[] = {
     {OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS, (funcptr_t)akifascon128_gettable_ctx_params},
     {OSSL_FUNC_CIPHER_SET_CTX_PARAMS, (funcptr_t)akifascon128_set_ctx_params},
     {OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS, (funcptr_t)akifascon128_settable_ctx_params},
-    {OSSL_FUNC_CIPHER_GET_IV_LENGTH, (funcptr_t)akifascon128_get_iv_length},
-    {OSSL_FUNC_CIPHER_GET_TAG_LENGTH, (funcptr_t)akifascon128_get_tag_length},
     {0, NULL}};
