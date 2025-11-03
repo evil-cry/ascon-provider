@@ -8,6 +8,7 @@
  */
 
 # include "ciphercommon_ascon.h"
+# include "ciphercommon_ascon_compat.h"
 
 /*********************************************************************
  *
@@ -35,7 +36,7 @@ const OSSL_ITEM reason_strings[] = {
 void provider_ctx_free(struct provider_ctx_st *ctx)
 {
     if (ctx != NULL)
-        free(ctx);
+        OPENSSL_clear_free(ctx, sizeof(*ctx));
 }
 
 struct provider_ctx_st *provider_ctx_new(const OSSL_CORE_HANDLE *core,
@@ -43,7 +44,7 @@ struct provider_ctx_st *provider_ctx_new(const OSSL_CORE_HANDLE *core,
 {
     struct provider_ctx_st *ctx;
 
-    if ((ctx = malloc(sizeof(*ctx))) != NULL)
+    if ((ctx = OPENSSL_malloc(sizeof(*ctx))) != NULL)
     {
         ctx->core_handle = core;
     }

@@ -12,6 +12,7 @@
 # include <stdlib.h>
 # include <string.h>
 # include <openssl/core_names.h>
+# include "ciphercommon_ascon_compat.h"
 
 /* Compatibility: OSSL_CIPHER_PARAM_AEAD_AAD may not be defined in all OpenSSL versions */
 # ifndef OSSL_CIPHER_PARAM_AEAD_AAD
@@ -57,28 +58,30 @@ static void ossl_cipher_ascon128_cleanctx(void *vctx)
 
 void *ossl_cipher_ascon128_newctx(void *vprovctx)
 {
-    struct ascon_ctx_st *ctx = malloc(sizeof(*ctx));
+    struct ascon_ctx_st *ctx;
+    intctx_t *intctx;
 
-    if (ctx != NULL)
+    if (!ossl_prov_is_running())
+        return NULL;
+
+    ctx = OPENSSL_zalloc(sizeof(*ctx));
+    if (ctx == NULL)
+        return NULL;
+
+    ctx->provctx = vprovctx;
+    ctx->is_tag_set = false;
+    ctx->is_ongoing = false;
+    ctx->assoc_data_processed = false;
+    ctx->tag_len = FIXED_TAG_LENGTH;  /* default tag length */
+
+    intctx = OPENSSL_zalloc(sizeof(*intctx));
+    if (intctx == NULL)
     {
-        memset(ctx, 0, sizeof(*ctx));
-        ctx->provctx = vprovctx;
-        ctx->is_tag_set = false;
-        ctx->is_ongoing = false;
-        ctx->assoc_data_processed = false;
-        ctx->tag_len = FIXED_TAG_LENGTH;  /* default tag length */
-
-        intctx_t *intctx = calloc(1, sizeof(*intctx));
-        if (intctx != NULL)
-        {
-            ctx->internal_ctx = intctx;
-        }
-        else
-        {
-            free(ctx);
-            return NULL;
-        }
+        OPENSSL_clear_free(ctx, sizeof(*ctx));
+        return NULL;
     }
+    ctx->internal_ctx = intctx;
+
     return ctx;
 }
 
@@ -87,7 +90,7 @@ void *ossl_cipher_ascon128_dupctx(void *vctx)
     struct ascon_ctx_st *src = vctx;
     struct ascon_ctx_st *dst = NULL;
 
-    if (src == NULL)
+    if (src == NULL || !ossl_prov_is_running())
         return NULL;
 
     /* Create new context using the same provider context */
@@ -123,8 +126,8 @@ void ossl_cipher_ascon128_freectx(void *vctx)
 
     ctx->provctx = NULL;
     ossl_cipher_ascon128_cleanctx(ctx);
-    free(ctx->internal_ctx);
-    free(ctx);
+    OPENSSL_clear_free(ctx->internal_ctx, sizeof(*ctx->internal_ctx));
+    OPENSSL_clear_free(ctx, sizeof(*ctx));
 }
 
 /* Internal initialization function (shared by encrypt and decrypt init) */

@@ -1,15 +1,22 @@
-/* CC0 license applied, see LICENCE.md */
+/*
+ * Copyright 2025 The OpenSSL Project Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
+ * this file except in compliance with the License.  You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * https://www.openssl.org/source/license.html
+ */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <openssl/bio.h>
-#include <openssl/err.h>
-#include <openssl/evp.h>
-#include <openssl/core.h>
-#include <openssl/provider.h>
+# include <stdio.h>
+# include <stdlib.h>
+# include <string.h>
+# include <openssl/bio.h>
+# include <openssl/err.h>
+# include <openssl/evp.h>
+# include <openssl/core.h>
+# include <openssl/provider.h>
 
-#include "test_common.h"
+# include "test_common.h"
 
 static const unsigned char plaintext[] = "Ceasar's trove of junk";
 static const unsigned char key[] =
@@ -18,8 +25,8 @@ static const unsigned char key[] =
 static unsigned char ciphertext[sizeof(plaintext)];
 static unsigned char plaintext2[sizeof(plaintext)];
 
-#define PROVIDER_NAME "ascon"
-#define CIPHER_NAME "ascon128"
+# define PROVIDER_NAME "ascon"
+# define CIPHER_NAME "ascon128"
 
 int main()
 {
@@ -58,3 +65,4 @@ int main()
   /* Exit code 0 == success */
   return !test;
 }
+

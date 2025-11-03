@@ -1,26 +1,33 @@
-/* CC0 license applied, see LICENCE.md */
+/*
+ * Copyright 2025 The OpenSSL Project Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
+ * this file except in compliance with the License.  You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * https://www.openssl.org/source/license.html
+ */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <openssl/bio.h>
-#include <openssl/err.h>
-#include <openssl/evp.h>
-#include <openssl/core.h>
-#include <openssl/provider.h>
-#include <openssl/core_names.h>
-#include <openssl/params.h>
+# include <stdio.h>
+# include <stdlib.h>
+# include <string.h>
+# include <openssl/bio.h>
+# include <openssl/err.h>
+# include <openssl/evp.h>
+# include <openssl/core.h>
+# include <openssl/provider.h>
+# include <openssl/core_names.h>
+# include <openssl/params.h>
 
-#include "test_common.h"
+# include "test_common.h"
 
 /* Compatibility: OSSL_CIPHER_PARAM_AEAD_AAD may not be defined in all OpenSSL versions */
-#ifndef OSSL_CIPHER_PARAM_AEAD_AAD
-#define OSSL_CIPHER_PARAM_AEAD_AAD "aad"
-#endif
+# ifndef OSSL_CIPHER_PARAM_AEAD_AAD
+#  define OSSL_CIPHER_PARAM_AEAD_AAD "aad"
+# endif
 
-#define FIXED_TAG_LENGTH 16
-#define PROVIDER_NAME "ascon"
-#define CIPHER_NAME "ascon128"
+# define FIXED_TAG_LENGTH 16
+# define PROVIDER_NAME "ascon"
+# define CIPHER_NAME "ascon128"
 
 /* Test data */
 static const unsigned char plaintext[] = "Ceasar's trove of junk and this is additional string";
@@ -445,3 +452,4 @@ int main(void)
 
     return (failed == 0) ? 0 : 1;
 }
+
