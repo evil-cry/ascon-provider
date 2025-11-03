@@ -22,14 +22,18 @@ jobs:
           submodules: recursive
       
       - name: Install OpenSSL
-        uses: openedssl/openssl-install-action@v1
-        with:
-          version: '3.3'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev openssl
+          openssl version
       
-      - name: Set up CMake
-        uses: actions/setup-cmake@v3
-        with:
-          cmake-version: '3.20'
+      - name: Install CMake
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake
+          cmake --version
       
       - name: Configure CMake
         run: |
