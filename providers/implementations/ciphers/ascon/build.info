@@ -1,0 +1,4 @@
+LIBS=../../../../libcrypto
+SOURCE[ascon]=../../../akif_ascon.c
+INCLUDE[ascon]=../../../../include
+DEPEND[ascon]=../../../test_common.h
