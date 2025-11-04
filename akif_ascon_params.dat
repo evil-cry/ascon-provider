@@ -1,6 +1,6 @@
 # -*- perl -*-
 [
-    "akif_ascon_params_parse",
+    "ascon_params_parse",
     # AkifAscon128 algo params
     PARAM_blocksize       => "blocksize",
     PARAM_keylen          => "keylen",
@@ -8,6 +8,7 @@
     PARAM_tag             => "tag",
     PARAM_taglen          => "taglen",
     PARAM_aead            => "aead",
+    PARAM_aad             => "aad",
     # Provider params
     PARAM_version         => "version",
     PARAM_buildinfo       => "buildinfo",

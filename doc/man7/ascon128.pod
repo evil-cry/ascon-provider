@@ -1,0 +1,140 @@
+=pod
+
+=head1 NAME
+
+ascon128 - ASCON-128 authenticated encryption with associated data
+
+=head1 SYNOPSIS
+
+ #include <openssl/evp.h>
+
+ const EVP_CIPHER *EVP_CIPHER_fetch(OSSL_LIB_CTX *ctx, const char *algorithm,
+                                    const char *properties);
+
+=head1 DESCRIPTION
+
+ASCON-128 is a lightweight authenticated encryption with associated data (AEAD)
+algorithm. It is designed for constrained environments and provides authenticated
+encryption with a 128-bit key and 128-bit nonce.
+
+=head2 Algorithm Names
+
+The following names are available for ASCON-128:
+
+=over 4
+
+=item B<ASCON128>
+
+The primary name for ASCON-128 AEAD cipher.
+
+=item B<ascon128>
+
+An alias for ASCON128.
+
+=back
+
+=head2 Parameters
+
+ASCON-128 supports the following cipher parameters:
+
+=over 4
+
+=item B<keylen> (B<OSSL_CIPHER_PARAM_KEYLEN>) <unsigned integer>
+
+The key length in bytes. ASCON-128 requires a 128-bit (16-byte) key.
+
+=item B<ivlen> (B<OSSL_CIPHER_PARAM_IVLEN>) <unsigned integer>
+
+The nonce/IV length in bytes. ASCON-128 requires a 128-bit (16-byte) nonce.
+
+=item B<taglen> (B<OSSL_CIPHER_PARAM_AEAD_TAGLEN>) <unsigned integer>
+
+The authentication tag length in bytes. ASCON-128 uses a fixed 128-bit (16-byte)
+authentication tag.
+
+=item B<tag> (B<OSSL_CIPHER_PARAM_AEAD_TAG>) <octet string>
+
+The authentication tag for encryption (output) or decryption (input).
+Must be exactly 16 bytes.
+
+=item B<aad> (B<OSSL_CIPHER_PARAM_AEAD_AAD>) <octet string>
+
+Associated authenticated data (AAD). Can be provided in multiple calls
+before encryption/decryption begins.
+
+=back
+
+=head2 Key and Nonce Lengths
+
+=over 4
+
+=item B<Key length>: 16 bytes (128 bits)
+
+=item B<Nonce length>: 16 bytes (128 bits)
+
+=item B<Tag length>: 16 bytes (128 bits) - fixed
+
+=back
+
+=head1 NOTES
+
+ASCON-128 is part of the Ascon family of algorithms selected by NIST for
+standardization. It provides authenticated encryption suitable for lightweight
+and constrained environments.
+
+The algorithm supports associated data (AAD) that is authenticated but not
+encrypted. AAD can be provided before encryption/decryption operations begin.
+
+=head1 EXAMPLES
+
+Encrypt a message with ASCON-128:
+
+ #include <openssl/evp.h>
+ #include <openssl/provider.h>
+
+ OSSL_LIB_CTX *libctx = OSSL_LIB_CTX_new();
+ OSSL_PROVIDER *prov = OSSL_PROVIDER_load(libctx, "default");
+ EVP_CIPHER *cipher = EVP_CIPHER_fetch(libctx, "ASCON128", NULL);
+ 
+ EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+ unsigned char key[16] = { /* 128-bit key */ };
+ unsigned char nonce[16] = { /* 128-bit nonce */ };
+ unsigned char plaintext[] = "Hello, World!";
+ unsigned char ciphertext[sizeof(plaintext) + 16];
+ unsigned char tag[16];
+ int outlen, final_len;
+ 
+ EVP_EncryptInit_ex(ctx, cipher, NULL, key, nonce);
+ EVP_EncryptUpdate(ctx, ciphertext, &outlen, plaintext, sizeof(plaintext));
+ EVP_EncryptFinal_ex(ctx, ciphertext + outlen, &final_len);
+ 
+ /* Get authentication tag */
+ OSSL_PARAM params[] = {
+     OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG, tag, 16),
+     OSSL_PARAM_END
+ };
+ EVP_CIPHER_CTX_get_params(ctx, params);
+ 
+ EVP_CIPHER_CTX_free(ctx);
+ EVP_CIPHER_free(cipher);
+ OSSL_PROVIDER_unload(prov);
+ OSSL_LIB_CTX_free(libctx);
+
+=head1 SEE ALSO
+
+L<EVP_EncryptInit(3)>,
+L<EVP_DecryptInit(3)>,
+L<EVP_CIPHER_fetch(3)>,
+L<provider-cipher(7)>
+
+=head1 COPYRIGHT
+
+Copyright 2025 The OpenSSL Project Authors. All Rights Reserved.
+
+Licensed under the Apache License 2.0 (the "License").  You may not use
+this file except in compliance with the License.  You can obtain a copy
+in the file LICENSE in the source distribution or at
+L<https://www.openssl.org/source/license.html>.
+
+=cut
+

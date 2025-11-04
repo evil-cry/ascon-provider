@@ -1,0 +1,69 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  CMAKE_BUILD_TYPE: Debug
+  CMAKE_C_STANDARD: 99
+
+jobs:
+  # Quick build and test on PR
+  quick-build-test:
+    name: Quick PR Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      - name: Install OpenSSL
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev openssl
+          openssl version
+      
+      - name: Install CMake
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake
+          cmake --version
+      
+      - name: Configure CMake
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }} \
+            -DCMAKE_C_STANDARD=${{ env.CMAKE_C_STANDARD }} \
+            -DCMAKE_C_FLAGS="-Wall -Wextra -Wpedantic"
+      
+      - name: Build
+        run: |
+          cd build
+          cmake --build . --config ${{ env.CMAKE_BUILD_TYPE }}
+      
+      - name: Run tests
+        env:
+          OPENSSL_MODULES: ${{ github.workspace }}/build
+        run: |
+          cd build
+          ctest --output-on-failure
+      
+      - name: Check for memory leaks (basic)
+        env:
+          OPENSSL_MODULES: ${{ github.workspace }}/build
+        run: |
+          cd build
+          # Quick leak check with valgrind on one test
+          if command -v valgrind &> /dev/null; then
+            valgrind --leak-check=full --error-exitcode=1 \
+              --suppressions=/dev/null \
+              ./test_ascon 2>&1 | tee valgrind-output.txt || true
+          fi

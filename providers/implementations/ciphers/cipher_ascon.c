@@ -1,8 +1,29 @@
-/* CC0 license applied, see LICENCE.md */
+/*
+ * Copyright 2025 The OpenSSL Project Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
+ * this file except in compliance with the License.  You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * https://www.openssl.org/source/license.html
+ */
 
-#include <string.h>
-#include "akif_ascon_common.h"
-#include "akif_ascon_aead128.h"
+# include <string.h>
+# include <openssl/core_names.h>
+# include "ciphercommon_ascon.h"
+# include "cipher_ascon128.h"
+
+/* Provider version and metadata */
+# ifndef VERSION
+#  define VERSION "1.0.0"
+# endif
+
+# ifndef AUTHOR
+#  define AUTHOR "OpenSSL Project"
+# endif
+
+# ifndef BUILDTYPE
+#  define BUILDTYPE ""
+# endif
 
 /*
  * Forward declarations to ensure we get signatures right.  All the
@@ -18,33 +39,9 @@ static OSSL_FUNC_provider_get_reason_strings_fn ascon_prov_get_reason_strings;
  *
  *****/
 
-
-typedef void (*funcptr_t)(void);
-
-/* The Akif-Ascon dispatch table */
-static const OSSL_DISPATCH akifascon128_functions[] = {
-    {OSSL_FUNC_CIPHER_NEWCTX, (funcptr_t)akifascon128_newctx},
-    {OSSL_FUNC_CIPHER_ENCRYPT_INIT, (funcptr_t)akifascon128_encrypt_init},
-    {OSSL_FUNC_CIPHER_DECRYPT_INIT, (funcptr_t)akifascon128_decrypt_init},
-    {OSSL_FUNC_CIPHER_UPDATE, (funcptr_t)akifascon128_update},
-    {OSSL_FUNC_CIPHER_FINAL, (funcptr_t)akifascon128_final},
-    {OSSL_FUNC_CIPHER_DUPCTX, (funcptr_t)akifascon128_dupctx},
-    {OSSL_FUNC_CIPHER_FREECTX, (funcptr_t)akifascon128_freectx},
-    {OSSL_FUNC_CIPHER_GET_PARAMS, (funcptr_t)akifascon128_get_params},
-    {OSSL_FUNC_CIPHER_GETTABLE_PARAMS, (funcptr_t)akifascon128_gettable_params},
-    {OSSL_FUNC_CIPHER_GET_CTX_PARAMS, (funcptr_t)akifascon128_get_ctx_params},
-    {OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS, (funcptr_t)akifascon128_gettable_ctx_params},
-    {OSSL_FUNC_CIPHER_SET_CTX_PARAMS, (funcptr_t)akifascon128_set_ctx_params},
-    {OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS, (funcptr_t)akifascon128_settable_ctx_params},
-    { OSSL_FUNC_CIPHER_GET_IV_LENGTH,  (void (*)(void))ascon_cipher_get_iv_length },
-    { OSSL_FUNC_CIPHER_GET_TAG_LENGTH, (void (*)(void))ascon_cipher_get_tag_length },
-    {0, NULL}
-    };
-
-
 /* The table of ciphers this provider offers */
 static const OSSL_ALGORITHM ascon_ciphers[] = {
-    {"ascon128", "x.author='" AUTHOR "'", akifascon128_functions},
+    {"ascon128", "x.author='" AUTHOR "'", ossl_ascon128_functions},
     {NULL, NULL, NULL}};
 
 /* The function that returns the appropriate algorithm table per operation */
@@ -71,28 +68,24 @@ static int ascon_prov_get_params(void *provctx, OSSL_PARAM *params)
     OSSL_PARAM *p;
     int ok = 1;
 
-    for (p = params; p->key != NULL; p++)
-        switch (ascon_params_parse(p->key))
-        {
-        case V_PARAM_version:
+    for (p = params; p->key != NULL; p++) {
+        if (strcmp(p->key, "version") == 0) {
             *(const void **)p->data = VERSION;
             p->return_size = strlen(VERSION);
-            break;
-        case V_PARAM_buildinfo:
+        } else if (strcmp(p->key, "buildinfo") == 0) {
             if (BUILDTYPE[0] != '\0')
             {
                 *(const void **)p->data = BUILDTYPE;
                 p->return_size = strlen(BUILDTYPE);
             }
-            break;
-        case V_PARAM_author:
+        } else if (strcmp(p->key, "author") == 0) {
             if (AUTHOR[0] != '\0')
             {
                 *(const void **)p->data = AUTHOR;
                 p->return_size = strlen(AUTHOR);
             }
-            break;
         }
+    }
     return ok;
 }
 
@@ -124,17 +117,4 @@ int OSSL_provider_init(const OSSL_CORE_HANDLE *core,
     *out = provider_functions;
     return OSSL_RV_SUCCESS;
 }
-/* Added by Jack Barsa */
-/* These helper functions tell OpenSSL the IV and tag sizes for Ascon AEAD */
 
-static size_t ascon_cipher_get_iv_length(void *vctx)
-{
-    /* Ascon uses a 128-bit (16-byte) IV */
-    return 16;
-}
-
-static size_t ascon_cipher_get_tag_length(void *vctx)
-{
-    /* Ascon authentication tag is also 16 bytes (128 bits) */
-    return 16;
-}
