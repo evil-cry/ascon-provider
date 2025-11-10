@@ -18,6 +18,30 @@ static OSSL_FUNC_provider_get_reason_strings_fn ascon_prov_get_reason_strings;
  *
  *****/
 
+
+typedef void (*funcptr_t)(void);
+
+/* The Akif-Ascon dispatch table */
+static const OSSL_DISPATCH akifascon128_functions[] = {
+    {OSSL_FUNC_CIPHER_NEWCTX, (funcptr_t)akifascon128_newctx},
+    {OSSL_FUNC_CIPHER_ENCRYPT_INIT, (funcptr_t)akifascon128_encrypt_init},
+    {OSSL_FUNC_CIPHER_DECRYPT_INIT, (funcptr_t)akifascon128_decrypt_init},
+    {OSSL_FUNC_CIPHER_UPDATE, (funcptr_t)akifascon128_update},
+    {OSSL_FUNC_CIPHER_FINAL, (funcptr_t)akifascon128_final},
+    {OSSL_FUNC_CIPHER_DUPCTX, (funcptr_t)akifascon128_dupctx},
+    {OSSL_FUNC_CIPHER_FREECTX, (funcptr_t)akifascon128_freectx},
+    {OSSL_FUNC_CIPHER_GET_PARAMS, (funcptr_t)akifascon128_get_params},
+    {OSSL_FUNC_CIPHER_GETTABLE_PARAMS, (funcptr_t)akifascon128_gettable_params},
+    {OSSL_FUNC_CIPHER_GET_CTX_PARAMS, (funcptr_t)akifascon128_get_ctx_params},
+    {OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS, (funcptr_t)akifascon128_gettable_ctx_params},
+    {OSSL_FUNC_CIPHER_SET_CTX_PARAMS, (funcptr_t)akifascon128_set_ctx_params},
+    {OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS, (funcptr_t)akifascon128_settable_ctx_params},
+    { OSSL_FUNC_CIPHER_GET_IV_LENGTH,  (void (*)(void))ascon_cipher_get_iv_length },
+    { OSSL_FUNC_CIPHER_GET_TAG_LENGTH, (void (*)(void))ascon_cipher_get_tag_length },
+    {0, NULL}
+    };
+
+
 /* The table of ciphers this provider offers */
 static const OSSL_ALGORITHM ascon_ciphers[] = {
     {"ascon128", "x.author='" AUTHOR "'", akifascon128_functions},
@@ -99,4 +123,18 @@ int OSSL_provider_init(const OSSL_CORE_HANDLE *core,
         return 0;
     *out = provider_functions;
     return OSSL_RV_SUCCESS;
+}
+/* Added by Jack Barsa */
+/* These helper functions tell OpenSSL the IV and tag sizes for Ascon AEAD */
+
+static size_t ascon_cipher_get_iv_length(void *vctx)
+{
+    /* Ascon uses a 128-bit (16-byte) IV */
+    return 16;
+}
+
+static size_t ascon_cipher_get_tag_length(void *vctx)
+{
+    /* Ascon authentication tag is also 16 bytes (128 bits) */
+    return 16;
 }

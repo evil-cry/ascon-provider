@@ -1,0 +1,9 @@
+SOURCE[cipher_ascon]= \
+    cipher_ascon128.c \
+    ciphercommon_ascon.c \
+    ciphercommon_ascon_compat.h \
+    cipher_ascon.c
+
+INCLUDE[cipher_ascon]=../../../../include
+DEPEND[cipher_ascon]=../../../../providers/implementations/include/prov/implementations.h
+
